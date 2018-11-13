@@ -1,8 +1,4 @@
 ---
-metadata:
-  title: Financial Statement
-  short title: Financial Statement
----
 modules:
  - docassemble.base.util
  - docassemble.income.income
@@ -34,7 +30,6 @@ comment: |
   This block sets the order the questions are asked in the interview.
   In particular, it lets us use a table to collect the lists of income/assets/expenses
   which is a little more natural than "is_there_another" approach to list gathering.
-mandatory: True
 code: |
   client.name.first
   if has_spouse:
@@ -71,6 +66,8 @@ code: |
   
   if vehicles.there_are_any:
     review_vehicles
+
+  financial_statement_questions = True
 ---
 code: |
   everyone.append(client)
@@ -751,7 +748,7 @@ content: |
   Total annual expenses: ${ currency(expenses.total()) }
   
 ---
-mandatory: True
+event:   financial_statement_download_screen
 question: |
   Your document is ready.
 subquestion: |

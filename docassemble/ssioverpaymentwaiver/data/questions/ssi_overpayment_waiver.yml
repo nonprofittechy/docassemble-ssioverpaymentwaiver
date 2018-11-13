@@ -1,609 +1,378 @@
 ---
 metadata:
-  title: Request for Waiver of SSI Overpayment
-  short title: Waiver Request
----
-modules:
- - docassemble.base.util
- - docassemble.income.income
+  title: SSI Overpayment Waiver Request
+  short title: Overpayment Waiver
 ---
 objects:
-  - client: Individual
-  - spouse: Individual 
-  - household: DAList.using(object_type=Individual,
-                            there_is_another=False,
-                            complete_attribute='complete')
-  - everyone: DAList.using(auto_gather=False)                         
-  - household.jobs: JobList.using(complete_attribute='value', there_is_another=False)
-  - household.incomes: IncomeList().using(complete_attribute='value',there_is_another=False)  
-  - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
-  - vehicles: ValueList.using(there_is_another=False,complete_attribute='value')
-  - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
-  - expenses: IncomeList.using(there_is_another=False,complete_attribute='type')
+  - recordee: Individual
+  - overpaid_persons: DAList.using(object_type=Individual)
 ---
-code: |
-  household[i].name.first
-  household[i].complete = True
+include:
+  - financial_statement.yml
 ---
-generic object: Individual
-objects:
-  - x.jobs: JobList.using(complete_attribute='value',there_is_another=False)
-  - x.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
----
-comment: |
-  This block sets the order the questions are asked in the interview.
-  In particular, it lets us use a table to collect the lists of income/assets/expenses
-  which is a little more natural than "is_there_another" approach to list gathering.
 mandatory: True
 code: |
   client.name.first
+  client.work_number
   if has_spouse:
     spouse.name.first
-  else:
-    spouse.jobs.there_are_any = False
-    spouse.incomes.there_are_any = False
   if household.there_are_any:
     review_household_members
-  everyone
-  
-  if client.jobs.there_are_any:
-    client.review_jobs
-  if client.incomes.there_are_any:
-    client.review_incomes
-  if has_spouse and spouse.jobs.there_are_any:
-    spouse.review_jobs
-  if has_spouse and spouse.incomes.there_are_any:
-    spouse.review_incomes
-    
-  if household.there_are_any and household.jobs.there_are_any:
-    household.review_jobs
-  if household.there_are_any and household.incomes.there_are_any:
-    household.review_incomes
 
-  if assets.there_are_any:
-    review_assets
-    
-  if real_estate.there_are_any:
-    review_real_estate
+  recordee.name.first
+  if overpaid_persons.there_are_any:
+    overpaid_persons.there_is_another
 
-  expenses.there_are_any
-  review_expenses  
+  overpayment_reason
+  if informed_ssa:
+    benefits_changed_after_contact
+  first_overpayment
+
+  possess_overpayment
+  payment_type
+  gave_cash_after_notice
+  cant_return_explanation
+  affordable_amount
+  overpayment_pay_less_reasons
+  received_ssi
+  expect_change
+
+  financial_statement_questions
+
+  accounts_special_purpose
+  assets_cannot_be_converted
+  assets_cannot_be_sold
+  signature_choice
   
-  if vehicles.there_are_any:
-    review_vehicles
+  financial_statement_download_screen
+---
+question: |
+  Person on whose record the overpayment occurred
+fields:
+  - Somebody already mentioned: recordee
+    datatype: object
+    disable others: True
+    choices: |
+      everyone
+  - First name: recordee.name.first
+  - Middle name: recordee.name.middle
+    required: False
+  - Last name: recordee.name.last
+  - Social Security Number: recordee.ssn
+---
+question: |
+  Overpaid person(s) making this request
+subquestion: |
+  Is there anyone who was overpaid other than ${recordee} and who
+  is making this request?
+yesno: overpaid_persons.there_are_any
+---
+question: |
+  Who is the ${ordinal(i)} overpaid person?
+fields:
+  - Somebody already mentioned: overpaid_persons[i]
+    datatype: object
+    disable others: True
+    choices: |
+      everyone
+  - First name: overpaid_persons[i].name.first
+  - Middle name: overpaid_persons[i].name.middle
+    required: False
+  - Last name: overpaid_persons[i].name.last
+  - Social Security Number: overpaid_persons[i].ssn
+  - Add another: overpaid_persons.there_is_another
+    datatype: yesno
+---
+question: |
+  What happened to the overpaid checks or money?
+fields:
+  - Do you currently have any of the money you were overpaid? : possess_overpayment
+    datatype: yesnoradio
+  - When you received the overpayment notice, did you have any of the money you were overpaid?: possessed_overpayment_at_notice
+    datatype: yesnoradio
+---
+question: |
+  What kind of Social Security payments do you receive?
+field: payment_type
+choices:
+  - Supplemental Security Income (SSI): SSI
+  - SSDI or Social Security Retirement: other
+---
+question: |
+  Acts you took after receiving the overpayment notice
+fields:  
+  - Did you lend or give away any property or cash after you received notice of the overpayment?: gave_cash_after_notice
+    datatype: yesnoradio
+  - Describe who received the property or cash, what it was and its value: gave_cash_after_notice_explanation
+    datatype: area
+    show if: gave_cash_after_notice
+  - Did you receive or sell any property or receive any cash, other than earnings, after you received the notice of overpayment?: received_cash_after_notice
+    datatype: yesnoradio
+  - Describe the property and sale price, or amount of cash received: received_cash_after_notice_explanation
+    datatype: area
+    show if: received_cash_after_notice
+---
+question: |
+  Overpayment
+subquestion: |
+  Using your own words, explain to the Social Security Administration 
+  why you do not think you should have to return the overpayment amount.
+fields:
+  - Why do you think you should not have to return the overpayment amount?: cant_return_explanation
+    datatype: area
+---
+question: |
+  Your expenses are higher than your income
+subquestion: |
+  From the information you gave us, your monthly expenses
+  are higher than your income. Explain how you are paying your bills
+  below.
+fields:
+  - no label: expenses_exceed_income_explanation
+    datatype: area
+---
+question: |
+  Reasons that you should not pay the full overpayment amount
+subquestion: |
+  Check all of the below that apply.
+fields:
+  - no label: overpayment_pay_less_reasons
+    datatype: checkboxes
+    choices:
+      - I cannot afford to pay back the money
+      - The overpayment was not my fault
+---
+question: |
+  How much can you afford to pay back each month?
+fields:
+  - no label: affordable_amount
+    datatype: currency
+---
+question: |
+  SSI Payments
+fields:
+  - Were you receiving SSI payments in the past?: received_ssi
+    datatype: yesnoradio
+  - Are you receiving SSI payments right now?: receives_ssi
+    datatype: yesnoradio
+---
+question: |
+  Explain why the overpayment happened
+subquestion: |
+  Use your own words to explain
+fields:
+  - What changed to cause the overpayment?: overpayment_reason
+    choices:
+      - I had too much money in a bank account
+      - I worked too many hours
+  - What do you know about how the overpayment happened?: overpayment_explanation
+    datatype: area
+  - Why was the overpayment not your fault?: overpayment_why_not_at_fault
+    datatype: area
+  - Why did you think you had a right to the money?: overpayment_why_had_right
+    datatype: area
+---
+question: |
+  Contact with Social Security Administration
+subquestion: |
+  You said that the reason for the overpayment was ${overpayment_reason}
+fields:
+  - Did you tell the Social Security Administration about ${overpayment_reason}?: informed_ssa
+    datatype: yesnoradio
+  - Why not?: did_not_inform_ssa_explanation
+    datatype: area
+    show if:
+      variable: informed_ssa
+      is: False
+  - Did you speak to someone (by phone or in person) about ${overpayment_reason}?: informed_orally
+    datatype: yesnoradio
+  - How, when and where?: how_when_where
+    show if:
+      variable: informed_orally
+      is: False
+  - Who did you talk to?: who_spokewith
+    show if: informed_orally
+  - What did you say?: informed_what_said 
+    datatype: area
+    show if: informed_orally
+---
+question: |
+  Follow-up
+subquestion: |
+  You said that you contacted the Social Security Administration
+  to let them know about ${overpayment_reason}.
+fields:
+  - After you reported that ${overpayment_reason}, did the Social Security Administration change your benefits amount?: benefits_changed_after_contact
+    datatype: yesnoradio
+  - Did you contact the Social Security Administration to follow-up?: benefits_did_not_change_followed_up
+    datatype: yesnoradio
+    show if:  
+      variable: benefits_changed_after_contact
+      is: False
+---
+question: |
+  Past overpayments
+fields:
+  - Is this the first time you have been overpaid?: first_overpayment
+    datatype: yesnoradio
+  - Why were you overpaid in the past?: past_overpayment_explanation
+    datatype: area
+    show if:
+      variable: first_overpayment
+      is: False
+  - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it.: past_overpayment_similar_explanation
+    datatype: area
+    show if:
+      variable: first_overpayment
+      is: False
+      
+---
+comment: |
+  Financial expectation and funds availability
+question: |
+  Changes to your financial situation
+subquestion: |
+  Please think about your financial situation and any changes, whether
+  for the better or worse, that you expect in the next 6 months.
+fields:
+  - In the next 6 months, I expect I or a household member: expect_change
+    datatype: checkboxes
+    choices:
+      - Will receive a large tax refund
+      - Will have a large bill repaid to me
+      - Will receive a pay raise
+      - Will receive a pay cut
+      - Will pay a major bill (such as house repairs)
+      - Other financial change for the better
+      - Other financial change for the worse
+  - Explain: expect_change_explanation
+    datatype: area
+    required: False
 ---
 code: |
-  everyone.append(client)
-  if has_spouse:
-    everyone.append(spouse)
-  everyone.extend(household)
-  everyone.gathered = True
+  cash_assets = [asset for asset in assets if asset.type in ['savings','checking']]
+  non_cash_assets = [asset for asset in assets if asset.type not in ['savings','checking']]
+  fixed_assets = vehicles + real_estate
 ---
 question: |
-  Who lives with you?
+  Are any funds being saved for a special purpose?
+subquestion: |
+  You said that you or a household member have the following
+  accounts that have cash on hand.
+  
+  Check any funds that are being saved for a special purpose.
 fields:
-  - My spouse: has_spouse
-    datatype: yesno
-  - Other family members: household.there_are_any
-    datatype: yesno
----
-question: |
-  What is your name?
-fields:
-  - First name: client.name.first
-  - Middle name: client.name.middle
-    required: False
-  - Last name: client.name.last
----
-question: |
-  What is your spouse's name?
-fields:
-  - First name: spouse.name.first
-  - Middle name: spouse.name.middle
-    required: False
-  - Last name: spouse.name.last
----
-question: |
-  Who is the ${ ordinal(i) } person who lives with you?
-fields:
-  - First Name: household[i].name.first  
-  - Last Name: household[i].name.last
----
-table: household.table
-rows: household
-columns:
-  - name: |
-      row_item.name.full()
-edit:
-  - name.first
----
-question: Household members
-subquestion: |
-  So far you've told us about ${len(household)} household ${noun_plural('members',len(household))}.
-  ${ household.table }
-  ${ household.add_action() }
-field: review_household_members
----
-generic object: Individual
-question: |
-  ${x}'s Jobs 
-subquestion: |
-  ${ x.jobs.table }
-  ${ x.jobs.add_action() }
-field: x.review_jobs
----
-question: |
-  Jobs of other household members
-subquestion: |
-  ${household.jobs.table }
-  ${ household.jobs.add_action() }
-field: household.review_jobs
----
-generic object: Individual
-question: |
-  ${x}'s Other income
-subquestion: |
-  ${ x.incomes.table }
-  ${ x.incomes.add_action() }
-field: x.review_incomes
----
-question: |
-  Other income from your household members
-subquestion: |
-  ${ household.incomes.table }
-  ${ household.incomes.add_action() }
-field: household.review_incomes
----
-question: |
-  Assets from you and your household members
-subquestion: |
-  ${ assets.table }
-  ${ assets.add_action() }
-field: review_assets
----
-question: |
-  Real estate owned by you or your household members
-subquestion: |
-  So far you've listed ${len(real_estate)} ${noun_plural('property',len(real_estate))}.
-  ${ real_estate.table }
-  ${ real_estate.add_action() }
-field: review_real_estate
----
-question: |
-  Household expenses
-subquestion: |
-  ${ expenses.table }
-  ${ expenses.add_action() }
-field: review_expenses
----
-question: |
-  Vehicles owned by household members
-subquestion: |
-  ${vehicles.table}
-  ${vehicles.add_action() }
-field: review_vehicles
----
-generic object: Individual
-question: |
-  Does ${x} earn money from working?
-subquestion: |
-  Answer yes if ${x} earns any money from work, including working for a boss at
-  an hourly or salaried rate, working for themself, or odd jobs such as babysitting.
-yesno: x.jobs.there_are_any
----
-question: |
-  Does anyone in the household other than you or your spouse earn money from working?
-subquestion: |
-  Answer yes if a household member earns any money from work, including working for a boss at
-  an hourly or salaried rate, working for themself, or odd jobs such as babysitting.
-yesno: household.jobs.there_are_any
----
-generic object: Individual
-question: |
-  Does ${x} earn any money that is _not_ from working?
-subquestion: |
-  Answer yes if ${x} has any other source of income. 
-  
-  Examples include:
-  
-  ${comma_and_list(flatten(non_wage_income_list()))}
-  
-yesno: x.incomes.there_are_any
----
-question: |
-  Does anyone in the household other than you or your spouse earn any money that is _not_ from working?
-subquestion: |
-  Answer yes if a household member has any other source of income. 
-  
-  Examples include:
-  
-  ${comma_and_list(flatten(non_wage_income_list()))}
-  
-yesno: household.incomes.there_are_any
----
-question: |
-  Does anyone in your household own any assets?
-subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-  
-  Examples of assets include:  ${comma_and_list(flatten(asset_type_list()))}
-yesno: assets.there_are_any
----
-question: |
-  Does anyone in your household own any vehicles?
-subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-  
-  Answer "no" if the only vehicle is the family car.
-  Examples include motorcycles, boats, and cars _other than_ the family car.
-yesno: vehicles.there_are_any
----
-question: |
-  Does anyone in your household own any real estate?
-subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-
-  Answer "yes" if anyone in the household owns any buildings or land, _other than_ 
-  the home that you live in.
-yesno: real_estate.there_are_any  
----
-question: |
-  Household expenses
-subquestion: |
-  On the next screen, you'll have a chance to list your household expenses.
-  
-  Examples include ${comma_and_list(flatten(expense_type_list()))}.
-field: expenses.there_are_any
-comment: |
-  Everyone has at least one household expense.
----
-generic object: Individual
-question: | 
-  Tell me about the ${ ordinal(i) } job of ${ x }.
-subquestion: |  
-  You should look
-  at ${ x }'s most recent pay stubs to answer this question.
-  You need to provide both the 'net' (take home) and 'gross' (amount before
-  taxes and deductions). If this is self-employment or an odd job,
-  'net' should be the amount ${x} keeps after self-employment taxes.
-fields:
-  - Employer's name: x.jobs[i].employer
-  - Net (take home) earnings each typical pay check: x.jobs[i].net
-    datatype: currency
-  - Gross earnings each typical pay check: x.jobs[i].value
-    datatype: currency
-  - How often does ${x.name.first} receive a pay check?: x.jobs[i].period
-    datatype: integer
-    code: |
-      period_list()
----
-question: | 
-  Tell me about the ${ ordinal(i) } job of your household members.
-subquestion: |  
-  You should look
-  at the household member's most recent pay stubs to answer this question.
-  You need to provide both the 'net' (take home) and 'gross' (amount before
-  taxes and deductions).
-fields:
-  - Whose job is this? : household.jobs[i].whose_job
-    datatype: object
-    choices: household.elements
-  - Employer's name: household.jobs[i].employer
-  - Net (take home) earnings each typical pay check: household.jobs[i].net
-    datatype: currency
-  - Gross earnings each typical pay check: household.jobs[i].value
-    datatype: currency
-  - How often do you receive a pay check?: household.jobs[i].period
-    datatype: integer
-    code: |
-      period_list()
----
-generic object: Individual
-question: | 
-  Non-employment income
-subquestion: |
-  Tell me about the ${ ordinal(i) } income of ${ x } that isn't a job.
-fields: 
-  - Where is the income received from?: x.incomes[i].type
-    code: |
-      non_wage_income_list()
-  - Please describe the kind or name of pension plan: x.incomes[i].name
-    show if:
-      variable: x.incomes[i].type
-      is: "pension"
-  - Name of the public benefits program: x.incomes[i].name
-    show if:
-      variable: x.incomes[i].type
-      is: "public assistance"      
-  - Amount: x.incomes[i].value
-    datatype: currency
-  - How often does ${x.name.first} receive it?: x.incomes[i].period
-    default: 12
-    code: |
-      period_list()
----
-question: | 
-  Tell me about the ${ ordinal(i) } income of your other household members
-  that isn't a job.
-fields: 
-  - Where is the income received from?: household.incomes[i].type
-    code: |
-      non_wage_income_list()
-  - Amount: household.incomes[i].value
-    datatype: currency
-  - How often does the person receive it?: household.incomes[i].period
-    default: 12
-    code: |
-      period_list()
----
-comment: |
-  assets
-question: |
-  Describe the ${ordinal(i) } asset owned by you and your household members.
-subquestion: |
-  Select more than one owner if both people own this asset. You'll be able to 
-  list more accounts for different members of your household later.
-fields:
-  - What type of asset is it?: assets[i].type
-    code: |
-      asset_type_list()
-  - Owner(s): assets[i].owner
+  - no label: accounts_special_purpose
     datatype: object_checkboxes
-    none of the above: False
-    choices: everyone
-  - Balance : assets[i].balance
-    datatype: currency
-  - Interest or other Income: assets[i].value
-    datatype: currency
-  - Income is received: assets[i].period
-    code: |
-      period_list()
----
-comment: |
-  vehicles
-question: |
-  Describe the ${ordinal(i)} vehicle owned by you or your household members,
-  other than the family car.
-fields:
-  - Owner(s): vehicles[i].owner
-    datatype: object_checkboxes
-    none of the above: False
-    choices: everyone
-  - Year: vehicles[i].year
-    input type: combobox
-    code: |
-      recent_years()
-  - Make: vehicles[i].make
-    hint: e.g, Ford, Honda 
-  - Model: vehicles[i].model
-    hint: e.g., Fusion, Civic
-  - Current value: vehicles[i].value
-    datatype: currency
-  - Loan balance: vehicles[i].balance    
-    datatype: currency
+    choices: cash_assets       
+  - Explain what the special purpose is: accounts_special_purpose_explanation
+    datatype: area        
     required: False
-  - Main purpose for use: vehicles[i].primary_purpose
-    input type: combobox
-    choices: 
-      - Recreation
-      - Needed for work
 ---
-comment: |
-  real estate
 question: |
-  Describe the ${ordinal(i)} real estate owned by you or your household member.
+  Are there any assets with a balance or value that CANNOT be converted to cash?
 subquestion: |
-  List anyone as the owner who is named as an owner on the deed for this property.
-fields: 
-  - Owner(s): real_estate[i].owner
-    datatype: object_checkboxes
-    none of the above: False
-    choices: everyone
-  - Description: real_estate[i].description
-  - Market value: real_estate[i].market_value
-    datatype: currency
-  - Mortgage balance: real_estate[i].balance
-    datatype: currency
-    required: False
-  - Rental income: real_estate[i].value
-    required: False
-    datatype: currency
-  - Rent is collected: real_estate[i].period
-    required: False
-    default: 12
-    datatype: integer
-    code: |
-      period_list()
----
-comment: |
-  expenses
-question: |
-  Describe the ${ ordinal(i)} expense that you and your other household members have.
+  You said that you or a household member have the following assets
+  that have a "balance or value".
+
+  Check any assets below that CANNOT be converted to cash.
 fields:
-  - Type of expense: expenses[i].type
-    code: |
-      expense_type_list()
-  - Amount: expenses[i].value
-    datatype: currency
-  - How often do you pay this amount?: expenses[i].period
-    default: 12
-    code: |
-      period_list()
+  - no label: assets_cannot_be_converted
+    datatype: object_checkboxes
+    choices: non_cash_assets
+  - Explain why the assets CANNOT be converted to cash: assets_cannot_be_converted_explanation
+    datatype: area
+    required: False
 ---
-generic object: Individual
-table: x.incomes.table
-rows: x.incomes
-columns:
-  - Type: |
-      row_item.type if defined('row_item.type') else ''
-  - Amount: |
-      currency(row_item.amount())
-edit:
-  - period
----
-table: household.incomes.table
-rows: household.incomes
-columns:
-  - Type: |
-      row_item.type if defined('row_item.type') else ''
-  - Amount: |
-      currency(row_item.amount())
-edit:
-  - period
----
-generic object: Individual
-table: x.jobs.table
-rows: x.jobs
-columns:
-  - Employer: |
-      row_item.employer
-  - Net income: |
-      currency(row_item.net_amount())
-  - Gross income: |
-      currency(row_item.amount())
-edit:
-  - period
----
-table: household.jobs.table
-rows: household.jobs
-columns:
-  - Employee: |
-      row_item.whose_job
-  - Employer: |
-      row_item.employer
-  - Net income: |
-      currency(row_item.net_amount())
-  - Gross income: |
-      currency(row_item.amount())
-edit:
-  - period
----
-table: vehicles.table
-rows: vehicles
-columns:
-  - Owner: |
-      row_item.owner
-  - Year/Make/Model: |
-      row_item.year +' ' +  row_item.make + ' ' + row_item.model
-  - Present value: |
-      currency(row_item.value)
-  - Loan balance: |
-      currency(row_item.balance)
-  - Purpose: |
-      row_item.primary_purpose
-edit:
-  - model
----
-table: assets.table
-rows: assets
-columns:
-  - Owner: |
-      row_item.owner
-  - Type: |
-      row_item.type
-  - Income: |
-      currency(row_item.amount()) if (defined('row_item.value') and defined('row_item.period')) else ''
-  - Current balance: |
-      currency(row_item.balance)
-edit:
-  - period
----
-table: real_estate.table
-rows: real_estate
-columns:
-  - Description: |
-      row_item.description
-  - Owner: |
-      row_item.owner
-  - Market value: |
-      currency(row_item.market_value)
-  - Mortgage balance: |
-      currency(row_item.balance)
-  - Monthly Rental Income: |
-      currency(row_item.amount(period_to_use=12))
-edit:
-  - balance
----
-table: expenses.table
-rows: expenses
-columns:
-  - Type: |
-      row_item.type
-  - Amount/month: |
-      currency(row_item.amount(period_to_use=12))
-edit:
-  - type
----
-template: financial_statement_template
-content: |
-
-  # Financial Statement for ${ client }  
-
-  ## Jobs
-  
-  ### Client
-  
-  Gross total: ${ client.jobs.total() } Net total: ${ client.jobs.net_total() }
-
-  %if has_spouse:  
-  ### Spouse
-  
-  Gross total: ${ spouse.jobs.total() } Net total: ${ spouse.jobs.net_total() }
-  %endif
-
-  %if household.there_are_any:
-  ### Household
-  
-  Gross total: ${ household.jobs.total() } Net total: ${ household.jobs.net_total() }
-  %endif
-
-  ## Other income
-  Client
-  ${ client.incomes.total() }
-  
-  %if has_spouse:
-  Spouse
-  ${ spouse.incomes.total() }
-  %endif
-  
-  %if household.there_are_any:
-  Household
-  ${ household.incomes.total() }
-  %endif
-  
-  ## Assets
-  
-  ### Bank and other accounts
-  
-  ${assets.table}
-  
-  Total Balance: ${assets.balance_total()} Total annual income: ${ assets.total() }
-  
-  ### Vehicles
-  
-  ${vehicles.table}
-  Total value: ${ vehicles.total() }
-  
-  ### Real estate
-  
-  ${real_estate.table}
-  Total value: ${ real_estate.market_value_total() } Total annual income: ${ real_estate.total() }
-  
-  ## Expenses
-
-  ${expenses.table}
-  Total annual expenses: ${ expenses.total() }
----
-mandatory: True
 question: |
-  Your document is ready.
+  Are there any assets that do not have a balance or value that CANNOT be sold or
+  otherwise converted to cash?
 subquestion: |
-  Thank you for using this interview.
-buttons:
-  - Exit: exit
-  - Restart: restart
-attachments:
-  - name: Financial Statement
-    filename: statement
-    content: |     
-      ${financial_statement_template}
+  You said that you or a household member have the following
+  vehicles and real estate, other than the family car or house.
+
+  Check any assets below that CANNOT be sold or otherwise converted
+  to cash.
+fields:
+  - no label: assets_cannot_be_sold
+    datatype: object_checkboxes
+    choices: fixed_assets
+  - Explain why the vehicle or property CANNOT be sold: assets_cannot_be_sold_explanation
+    datatype: area
+    required: False
+---
+question: |
+  Your contact information
+fields:
+  - Work phone number: client.work_number
+  - Home phone number: client.home_number
+  - Address: client.address.address
+    address autocomplete: True
+  - Unit or Apt: client.address.unit
+  - City: client.address.city
+  - State: client.address.state
+    code: |
+      states_list()
+  - Zip code: client.address.zip
+  - County: client.address.county
+    required: False
+---
+question: |
+  Signature
+subquestion: |
+  Before you mail or deliver this form, you need to sign it.
+fields:
+  - Where do you want to sign?: signature_choice
+    input type: radio
+    default: phone
+    choices:
+      - Sign on this device: this device
+      - Sign on paper after I print the forms: paper
+      - Sign on my phone: phone
+    show if: 
+      code: |
+        device().is_pc      
+  - note: |
+      To sign on your phone, point your phone camera at this barcode and click the 
+      barcode or link icon that appears in the camera view. Click continue on your 
+      phone.
+      
+      <center>
+      ${interview_url_as_qr()}
+      </center>
+
+    show if: 
+      code: |
+        device().is_pc    
+  - Or, text me a link at this phone number: link_cell
+    show if: 
+      code: |
+        device().is_pc        
+    required: false
+  - note: |
+      Once this screen has loaded on your mobile device, click continue.
+    show if: 
+      code: |
+        not device().is_pc            
+continue button field: saw_signature_choice
+help: |
+  Many smartphones will automatically find the link on this screen. The link
+  may "float" up from the screen into a small icon you can click.
+  If your phone does not do this, use the text option instead.
+  
+---
+question: Sign on your phone
+subquestion: |
+  % if device().is_pc:
+  Click continue on this screen once you have finished signing on your phone.
+  % else:
+  Click continue on this screen when you're ready to sign.
+  % endif
+  
+field: signature_wait_screen  
+---
+question: Sign below
+subquestion: |
+signature: client.signature
+under: |
+  ${ client }
