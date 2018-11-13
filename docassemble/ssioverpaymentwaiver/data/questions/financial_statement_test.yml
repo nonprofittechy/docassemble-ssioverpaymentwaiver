@@ -1,0 +1,8 @@
+---
+include:
+  - financial_statement.yml
+---
+mandatory: True
+code: |
+  financial_statement_questions  
+  financial_statement_download_screen
