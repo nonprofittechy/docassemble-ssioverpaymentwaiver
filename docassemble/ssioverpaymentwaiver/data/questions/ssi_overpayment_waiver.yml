@@ -623,11 +623,11 @@ attachment:
       - "user_pension_1": ${client_pensions.item(0).amount(period_to_use=12)}
       - "spouse_pension_1": ${spouse_pensions.item(0).amount(period_to_use=12)}
       - "dependent_pension_1": ${household_pensions.item(0).amount(period_to_use=12)}
-      - "pension_type_2": ${', '.join([client_pensions.item(1).name,spouse_pensions.item(1).name,household_pensions.item(1).name])}
+      - "pension_type_2": ${', '.join([client_pensions.item(1).name, spouse_pensions.item(1).name, household_pensions.item(1).name])}
       - "user_pension_2": ${client_pensions.item(1).amount(period_to_use=12)}
       - "spouse_pension_2": ${spouse_pensions.item(1).amount(period_to_use=12)}
       - "dependent_pension_2": ${household_pensions.item(1).amount(period_to_use=12)}
-      - "other_assistance_type": ${incomes.matches('public assistance).item(0).name}
+      - "other_assistance_type": ${incomes.matches('public assistance').item(0).name}
       - "user_other_assistance": ${client.incomes.total(type='public assistance',period_to_use=12)}
       - "spouse_other_assistance": ${spouse.incomes.total(type='public assistance',period_to_use=12)}
       - "dependent_other_assistance": ${household.incomes.total(type='public assistance',period_to_use=12)}
