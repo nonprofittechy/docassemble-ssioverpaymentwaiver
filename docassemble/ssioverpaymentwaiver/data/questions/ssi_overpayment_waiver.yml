@@ -6,6 +6,7 @@ metadata:
 objects:
   - recordee: Individual
   - overpaid_persons: DAList.using(object_type=Individual)
+  - beneficiary: Individual
 ---
 include:
   - financial_statement.yml
@@ -44,7 +45,7 @@ code: |
   assets_cannot_be_sold
   signature_choice
   
-  financial_statement_download_screen
+  download_form
 ---
 question: |
   Person on whose record the overpayment occurred
@@ -58,7 +59,42 @@ fields:
   - Middle name: recordee.name.middle
     required: False
   - Last name: recordee.name.last
+---
+question: |
+  Person on whose record the overpayment occurred
+fields:  
   - Social Security Number: recordee.ssn
+---
+question: |
+  Are you the representative payee?
+yesno: overpayment_is_rep_payee
+---
+question: |
+  How were the overpaid benefits used?
+fields:
+  - no label: overpayment_benefits_used_for
+    datatype: area
+---
+question: |
+  Who is the beneficiary?
+fields:
+  - Somebody already mentioned: beneficiary
+    datatype: object
+    disable others: True
+    choices: |
+      everyone
+  - First name: beneficiary.name.first
+  - Last name: beneficiary.name.last
+  - Address: beneficiary.address.address
+    address autocomplete: True
+  - Unit or Apt: beneficiary.address.unit
+  - City: beneficiary.address.city
+  - State: beneficiary.address.state
+    code: |
+      states_list()
+  - Zip code: beneficiary.address.zip
+  - County: beneficiary.address.county
+    required: False      
 ---
 question: |
   Overpaid person(s) making this request
@@ -80,8 +116,11 @@ fields:
     required: False
   - Last name: overpaid_persons[i].name.last
   - Social Security Number: overpaid_persons[i].ssn
-  - Add another: overpaid_persons.there_is_another
-    datatype: yesno
+---
+question: |
+  Who is the ${ordinal(i)} overpaid person?  
+fields:
+  - Social Security Number: overpaid_persons[i].ssn
 ---
 question: |
   What happened to the overpaid checks or money?
@@ -141,6 +180,11 @@ fields:
     choices:
       - I cannot afford to pay back the money
       - The overpayment was not my fault
+      - Requiring me to pay back the overpayment is unfair
+---
+code: |
+  overpayment_not_my_fault = overpayment_pay_less_reasons['The overpayment was not my fault']
+  overpayment_cant_afford = overpayment_pay_less_reasons['The overpayment was not my fault']
 ---
 question: |
   How much can you afford to pay back each month?
@@ -376,3 +420,287 @@ subquestion: |
 signature: client.signature
 under: |
   ${ client }
+---
+code: |
+  client_support = client.incomes.total(type='other') > 0
+  spouse_support = spouse.incomes.total(type='other') > 0
+  household_support = household.incomes.total(type='other') > 0
+    
+  receives_support = client_support or spouse_support or household_support
+  
+  if receives_support:
+    all_incomes = client.incomes + spouse.incomes + household.incomes
+    support_sources = [income.name for income in all_incomes if income.type == 'other']
+  else:
+    support_sources = []
+---
+code: |
+  client_pensions = client.incomes.matches('pension')
+  spouse_pensions = spouse.incomes.matches('pension')
+  household_pensions = household.incomes.matches('pension')
+---
+code: |
+  savings = assets.matches('savings')
+---
+question: Here is your document.
+event: download_form
+attachment:
+  - name: ssa-632_Converted
+    filename: ssa-632_Converted
+    pdf template file: ssa-632_Converted.pdf
+    fields:
+      - "record_owner": ${recordee}
+      - "record_ssn": ${recordee.ssn}
+      - "requestor_1": ${overpaid_persons.item(0)}
+      - "requestor_1_ssn": ${overpaid_persons.item(0).ssn}
+      - "requestor_2": ${overpaid_persons.item(1)}
+      - "requestor_2_ssn": ${overpaid_persons.item(1).ssn}
+      - "requestor_3": ${overpaid_persons.item(2)}
+      - "requestor_3_ssn": ${overpaid_persons.item(2).ssn}
+      - "requestor_4": ${overpaid_persons.item(3)}
+      - "requestor_4_ssn": ${overpaid_persons.item(3).ssn}
+      - "overpayment_not_my_fault": ${yesno(overpayment_not_my_fault)}
+      - "overpayment_cant_afford_full_benefit": ${yesno(overpayment_cant_afford)}
+      - "overpayment_affordable_amount": ${affordable_amount}
+      - "overpayment_dont_receive_ssi": ${yesno(received_ssi)}
+      - "overpayment_dont_receive_ssi_affordable_amount": ${affordable_amount}
+      - "overpayment_receive_ssi": ${yesno(receives_ssi)}
+      - "overpayment_receive_ssi_affordable_amount": ${affordable_amount}
+      - "rep_received_benefits_no": ${noyes(overpayment_is_rep_payee)}
+      - "rep_received_benefits_yes": ${yesno(overpayment_is_rep_payee)}
+      - "beneficiary_name": ${beneficiary + ' ' + beneficiary.address.block() }
+      - "benefits_used_for": ${ overpayment_benefits_used_for}
+      - "someone_else_lived_with_user_yes": No 
+      - "someone_else_lived_with_user_no": No
+      - "someone_else_user_received_benefits_no": No
+      - "someone_else_user_received_benefits_yes": No
+      - "someone_else_overpayment_explanation": ${ overpayment_explanation }
+      - "why_thought_entitled": why thought entitled
+      - "told_ssa_yes": ${yesno(informed_ssa)}
+      - "told_ssa_no": ${noyes(informed_ssa)}
+      - "why_didnt_tel_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
+      - "told_ssa_how": ${ informed_what_said if informed_ssa else '' }
+      - "contacted_ssa_again_yes": No
+      - "contacted_ssa_again_no": No
+      - "overpaid_before_yes": ${noyes(first_overpayment)}
+      - "overpaid_before_no": ${yesno(first_overpayment)}
+      - "overpaid_before_ssn": something
+      - "overpaid_before_steps_to_prevent": ${ past_overpayment_explanation}
+      - "possess_money_yes": No
+      - "possess_money_amount": something
+      - "possess_money_no": No
+      - "possessed_money_yes": No
+      - "possessed_money_amount": something
+      - "possessed_money_no": No
+      - "why_can_keep": 9. 
+      - "gave_away_yes": No
+      - "gave_away_no": No
+      - "gave_away_details": No
+      - "sold_yes": No
+      - "sold_no": No
+      - "sold_details": something
+      - "receiving_benefits_yes": ${yesno(receives_ssi)}
+      - "receiving_benefits_no": ${noyes( receives_ssi)}
+      - "receiving_benefits_name": No
+      - "receiving_benefits_claim_number": No
+      - "dependent_1": ${household.item(0)}
+      - "dependent_1_age": ${household.item(0).age}
+      - "dependent_1_relationship": ${household.item(0).relationship}
+      - "dependent_2": ${household.item(1)}
+      - "dependent_2_age": ${household.item(1).age}
+      - "dependent_2_relationship": ${household.item(1).relationship}
+      - "dependent_3": ${household.item(2)}
+      - "dependent_3_age": ${household.item(2).age}
+      - "dependent_3_relationship": ${household.item(2).relationship}
+      - "dependent_4": ${household.item(3)}
+      - "dependent_4_age": ${household.item(3).age}
+      - "dependent_4_relationship": ${household.item(3).relationship}
+      - "asset_amount": something
+      - "savings_owner_1": ${savings.item(0).owner}
+      - "savings_amount_1": ${savings.item(0).balance}
+      - "savings_monthly_1": ${savings.item(0).amount(period_to_use=12)}
+      - "savings_explanation_1": something
+      - "savings_owner_2": ${savings.item(1).owner}
+      - "savings_amount_2": ${savings.item(1).balance}
+      - "savings_monthly_2": ${savings.item(1).amount(period_to_use=12)}
+      - "savings_explanation_2": something
+      - "cd_explanation": something
+      - "cd_owner": ${comma_and_list(assets.owners(type='cd'))}
+      - "cd_amount": ${assets.balance_total(type='cd')}
+      - "cd_monthly": ${assets.total(type='savings',period_to_use=12)}
+      - "ira_owner": ${comma_and_list(assets.owners(type='ira'))}
+      - "ira_amount": ${assets.balance_total(type='ira')}
+      - "ira_monthly": ${assets.total(type='ira',period_to_use=12)}
+      - "ira_explanation": something
+      - "mutualfund_explanation": something
+      - "mutalfund_owner": ${comma_and_list(assets.owners(type='mutual fund'))}
+      - "mutualfund_amount": ${assets.balance_total(type='mutual fund')}
+      - "mutualfund_monthly": ${assets.total(type='mutual fund',period_to_use=12)}
+      - "stocks_explanation": something
+      - "stocks_owner": ${comma_and_list(assets.owners(type='stocks'))}
+      - "stocks_amount": ${assets.balance_total(type='stocks')}
+      - "stocks_monthly": ${assets.total(type='stocks',period_to_use=12)}
+      - "trust_explanation": something
+      - "trust_owner": ${comma_and_list(assets.owners(type='trust'))}
+      - "trust_amount": ${assets.balance_total(type='trust')}
+      - "trust_monthly": ${assets.total(type='trust',period_to_use=12)}
+      - "checking_owner": ${comma_and_list(assets.owners(type='checking'))}
+      - "checking_amount": ${assets.balance_total(type='checking')}
+      - "checking_monthly": ${assets.total(type='checking',period_to_use=12)}
+      - "checking_explanation": something
+      - "asset_other_owner": ${comma_and_list(assets.owners(type='other'))}
+      - "asset_other_amount": ${assets.balance_total(type='other')}
+      - "asset_other_monthly": ${assets.total(type='other',period_to_use=12)}
+      - "asset_other_explanation": something
+      - "asset_other_description": something
+      - "countable_asset_total_amount": ${assets.balance_total()}
+      - "countable_asset_total_monthly": ${assets.total(period_to_use=12)}
+      - "vehicle_owner_1": ${comma_and_list(vehicles.item(0).owner)}
+      - "vehicle_year_make_model_1": ${vehicles.item(0).year_make_model() }
+      - "vehicle_pv_1": ${vehicles.item(0).value}
+      - "vehicle_loan_balance_1": ${vehicles.item(0).balance}
+      - "vehicle_purpose_1": ${vehicles.item(0).primary_purpose}
+      - "vehicle_owner_2": camper, motorcycle, or any other vehicle or a boat, list below.2
+      - "vehicle_year_make_model_2": ${vehicles.item(0).year_make_model() }
+      - "vehicle_pv_2": ${vehicles.item(1).value}
+      - "vehicle_loan_balance_2": ${vehicles.item(1).balance}
+      - "vehicle_purpose_2": ${vehicles.item(1).primary_purpose}
+      - "vehicle_owner_3": camper, motorcycle, or any other vehicle or a boat, list below.3
+      - "vehicle_year_make_model_3": ${vehicles.item(0).year_make_model() }
+      - "vehicle_pv_3": ${vehicles.item(2).value}
+      - "vehicle_loan_balance_3": ${vehicles.item(2).balance}
+      - "vehicle_purpose_3": ${vehicles.item(2).primary_purpose}
+      - "real_property_owner_1": ${real_estate.item(0).owner}
+      - "real_property_description_1": ${real_estate.item(0).description}
+      - "real_property_value_1": ${real_estate.item(0).market_value}
+      - "real_property_loan_balance_1": ${real_estate.item(0).balance}
+      - "real_property_income_1": ${real_estate.item(0).amount(period_to_use=12)}
+      - "real_property_owner_2": ${real_estate.item(1).owner}
+      - "real_property_description_2": ${real_estate.item(1).description}
+      - "real_property_value_2": ${real_estate.item(1).market_value}
+      - "real_property_loan_balance_2": ${real_estate.item(2).balance}
+      - "real_property_income_2": ${real_estate.item(0).amount(period_to_use=12)}
+      - "real_property_owner_3": ${real_estate.item(2).owner}
+      - "real_property_description_3": ${real_estate.item(2).description}
+      - "real_property_value_3": ${real_estate.item(2).market_value}
+      - "real_property_loan_balance_3": ${real_estate.item(2).balance}
+      - "real_property_income_3": ${real_estate.item(2).amount(period_to_use=12)}
+      - "real_property_owner_4": ${real_estate.item(3).owner}
+      - "real_property_description_4": ${real_estate.item(3).description}
+      - "real_property_value_4": ${real_estate.item(3).market_value}
+      - "real_property_loan_balance_4":  ${real_estate.item(3).balance}
+      - "real_property_income_4": ${real_estate.item(3).amount(period_to_use=12)}
+      - "user_employed_yes": ${yesno(client.jobs.there_are_any)}
+      - "user_employed_no": ${noyes( client.jobs.there_are_any)}
+      - "user_wages_gross": ${client.jobs.total(period_to_use=12)}
+      - "user_wages_net": ${client.jobs.net_total(period_to_use=12)}
+      - "user_employer_name_address_phone": ${client.jobs.item(0).name_address_phone()}
+      - "spouse_employed_yes": ${yesno(spouse.jobs.there_are_any)}
+      - "spouse_employed_no": ${noyes( spouse.jobs.there_are_any)}
+      - "spouse_wages_gross": ${spouse.jobs.total(period_to_use=12)}
+      - "spouse_wages_net": ${spouse.jobs.net_total(period_to_use=12)}
+      - "spouse_employer_name_address_phone": ${spouse.jobs.item(0).name_address_phone()}
+      - "dependent_employed_yes": ${yesno(household.jobs.there_are_any)}
+      - "dependent_employed_no": ${noyes( household.jobs.there_are_any)}
+      - "dependent_employed_names": ${household.jobs.item(0).whose_job}
+      - "dependent_wages_gross": ${household.jobs.gross_total()}
+      - "dependent_wages_net": ${household.jobs.net_total()}
+      - "dependent_employer_name_address_phone": ${household.jobs.item(0).name_address_phone()}
+      - "receive_support_yes": ${yesno(receives_support)}
+      - "receive_support_no": ${noyes( receives_support)}
+      - "receive_support_source": ${comma_and_list(support_sources)}
+      - "receive_support_amount": ${client.jobs.total(type='other') + spouse.jobs.total(type='other') + household.jobs.total(type='other')}
+      - "user_net_pay_total": ${client.jobs.net_total(period_to_use=12)}
+      - "spouse_net_pay_total": ${spouse.jobs.net_total(period_to_use=12)}
+      - "dependent_net_pay_total": ${household.jobs.net_total(period_to_use=12)}
+      - "user_ss_total": ${client.incomes.net_total(period_to_use=12, type='SSR')}
+      - "spouse_ss_total": ${spouse.incomes.net_total(period_to_use=12, type='SSR')}
+      - "dependent_ss_total": ${household.incomes.net_total(period_to_use=12, type='SSR')}
+      - "spouse_ssi_total": ${spouse.incomes.net_total(period_to_use=12, type='SSI')}
+      - "user_ssi_total": ${client.incomes.net_total(period_to_use=12, type='SSI')}
+      - "dependent_ssi_total": ${household.incomes.net_total(period_to_use=12, type='SSI')}
+      - "pension_type_1": ${', '.join([client_pensions.item(0).name,spouse_pensions.item(0).name,household_pensions.item(0).name])}
+      - "user_pension_1": ${client_pensions.item(0).amount(period_to_use=12)}
+      - "spouse_pension_1": ${spouse_pensions.item(0).amount(period_to_use=12)}
+      - "dependent_pension_1": ${household_pensions.item(0).amount(period_to_use=12)}
+      - "pension_type_2": ${', '.join([client_pensions.item(1).name,spouse_pensions.item(1).name,household_pensions.item(1).name])}
+      - "user_pension_2": ${client_pensions.item(1).amount(period_to_use=12)}
+      - "spouse_pension_2": ${spouse_pensions.item(1).amount(period_to_use=12)}
+      - "dependent_pension_2": ${household_pensions.item(1).amount(period_to_use=12)}
+      - "other_assistance_type": ${incomes.matches('public assistance).item(0).name}
+      - "user_other_assistance": ${client.incomes.total(type='public assistance',period_to_use=12)}
+      - "spouse_other_assistance": ${spouse.incomes.total(type='public assistance',period_to_use=12)}
+      - "dependent_other_assistance": ${household.incomes.total(type='public assistance',period_to_use=12)}
+      - "user_snap_total": ${client.incomes.total(type='SNAP',period_to_use=12)}
+      - "spouse_snap_total": ${spouse.incomes.total(type='public assistance',period_to_use=12)}
+      - "dependent_snap_total": ${household.incomes.total(type='public assistance',period_to_use=12)}
+      - "user_rent_income_total": ${client.incomes.total(type='rent',period_to_use=12)}
+      - "spouse_rent_income_total": ${spouse.incomes.total(type='rent',period_to_use=12)}
+      - "dependent_rent_income_total": ${household.incomes.total(type='rent',period_to_use=12)}
+      - "user_room_board_total": ${client.incomes.total(type='room and board',period_to_use=12)}
+      - "spouse_room_board_total": ${spouse.incomes.total(type='room and board',period_to_use=12)}
+      - "dependent_room_board_total": ${dependent.incomes.total(type='room and board',period_to_use=12)}
+      - "user_child_support_total": ${client.incomes.total(type='child support',period_to_use=12)}
+      - "spouse_child_support_total": ${spouse.incomes.total(type='child support',period_to_use=12)}
+      - "dependent_child_support_total": ${household.incomes.total(type='child support',period_to_use=12)}
+      - "user_other_support_total": ${client.incomes.total(type='other support',period_to_use=12)}
+      - "spouse_other_support_total": ${spouse.incomes.total(type='other support',period_to_use=12)}
+      - "dependent_other_support_total": ${household.incomes.total(type='other support',period_to_use=12)}
+      - "user_asset_income_total": ${assets.total(owner=client,period_to_use=12)}
+      - "spouse_asset_income_total": ${assets.total(owner=spouse,period_to_use=12)}
+      - "dependent_asset_income_total": ${assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12)}
+      - "user_other_total": ${client.incomes.total(type='other',period_to_use=12)}
+      - "spouse_other_total": ${spouse.incomes.total(type='other',period_to_use=12)}
+      - "dependent_other_total": ${household.incomes.total(type='other',period_to_use=12)}
+      - "user_income_total": ${client.incomes.total(period_to_use=12) + assets.total(owner=client,period_to_use=12) + client.jobs.total(period_to_use=12)}
+      - "spouse_income_total": ${spouse.incomes.total(period_to_use=12) + assets.total(owner=spouse,period_to_use=12) + spouse.jobs.total(period_to_use=12)}
+      - "dependent_income_total": ${household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12)}
+      - "None": something
+      - "other_explanation": something
+      - "expense_rent": ${expenses.total(type='rent',period_to_use=12)}
+      - "expense_food": ${expenses.total(type='food',period_to_use=12)}
+      - "expense_utilities": ${expenses.total(type='utilities',period_to_use=12)}
+      - "expense_fuel": ${expenses.total(type='fuel',period_to_use=12)}
+      - "expense_clothing": ${expenses.total(type='clothing',period_to_use=12)}
+      - "expense_cc_minimum": ${expenses.total(type='credit cards',period_to_use=12)}
+      - "expense_property_tax": ${expenses.total(type='property tax',period_to_use=12)}
+      - "expense_fees": ${expenses.total(type='other taxes',period_to_use=12)}
+      - "expense_insurance_1": ${expenses.matches('insurance').item(0).amount(period_to_use=12)}
+      - "expense_insurance_2": ${expenses.matches('insurance').item(1).amount(period_to_use=12)}
+      - "expense_medical": ${expenses.total(type='medical',period_to_use=12)}
+      - "expense_car": ${expenses.total(type='auto',period_to_use=12)}
+      - "expense_transportation": ${expenses.total(type='transportation',period_to_use=12)}
+      - "expense_charity_1": ${expenses.matches('charity').item(0).amount(period_to_use=12)}
+      - "expense_charity_2": ${expenses.matches('charity').item(1).amount(period_to_use=12)}
+      - "expense_charity_3": ${expenses.matches('charity').item(2).amount(period_to_use=12)}
+      - "expense_loan_1": ${expenses.matches('loan').item(0).amount(period_to_use=12)}
+      - "expense_loan_2": ${expenses.matches('loan').item(1).amount(period_to_use=12)}
+      - "expense_support_1": ${expenses.matches('support').item(0).amount(period_to_use=12)}
+      - "expense_support_details": something
+      - "expense_support_2": ${expenses.matches('support').item(1).amount(period_to_use=12)}
+      - "expense_other_details": something
+      - "expense_other":  ${expenses.total(type='other',period_to_use=12)}
+      - "adjusted_expenses": something
+      - "adjusted_monthly_expenses": something
+      - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation}
+      - "financial_situation_will_change_yes": ${yesno(expect_change)}
+      - "financial_situation_will_change_no": ${noyes(expect_change)}
+      - "cash_special_purpose_no_amount_on_hand": No
+      - "cash_special_purpose_no_money": No
+      - "cash_special_purpose_yes": No
+      - "special_purpose_explanation": special purpose?
+      - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted)}
+      - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted)}
+      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation}
+      - "cant_convert_property_yes": ${yesno(assets_cannot_be_sold)}
+      - "cant_convert_property_no": ${noyes(assets_cannot_be_sold)}
+      - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation}
+      - "remarks_continued": something
+      - "remarks_continued_more": something
+      - "signature_date": ${today()}
+      - "phone_work": ${client.phone_work}
+      - "phone_home": ${client.phone_home}
+      - "user_mailing_address": ${client.address.address}
+      - "user_city_state": ${client.address.city + ' ' + client.address.state}
+      - "user_zip": ${ client.address.zip}
+      - "user_county": ${ client.address.county}

@@ -105,6 +105,9 @@ question: |
 fields:
   - First Name: household[i].name.first  
   - Last Name: household[i].name.last
+  - Age: household[i].age
+    datatype: integer
+  - Relationship to ${client}: household[i].relationship
 ---
 table: household.table
 rows: household
@@ -322,7 +325,11 @@ fields:
   - Name of the public benefits program: x.incomes[i].name
     show if:
       variable: x.incomes[i].type
-      is: "public assistance"      
+      is: "public assistance"
+  - Source of the other support: x.incomes[i].name
+    show if:
+      variable: x.incomes[i].type
+      is: "other"
   - Amount: x.incomes[i].value
     datatype: currency
   - How often does ${x.name.first} receive it?: x.incomes[i].period
@@ -337,6 +344,18 @@ fields:
   - Where is the income received from?: household.incomes[i].type
     code: |
       non_wage_income_list()
+  - Please describe the kind or name of pension plan: household.incomes[i].name
+    show if:
+      variable: household.incomes[i].type
+      is: "pension"
+  - Name of the public benefits program: household.incomes[i].name
+    show if:
+      variable: household.incomes[i].type
+      is: "public assistance"
+  - Source of the other support: household.incomes[i].name
+    show if:
+      variable: household.incomes[i].type
+      is: "other"      
   - Who receives this income?: household.incomes[i].recipient
     datatype: object
     choices: household
