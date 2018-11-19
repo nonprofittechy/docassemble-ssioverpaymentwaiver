@@ -5,7 +5,7 @@ metadata:
 ---
 objects:
   - recordee: Individual
-  - overpaid_persons: DAList.using(object_type=Individual)
+  - overpaid_persons: DAList.using(object_type=Individual,there_is_another=False)
   - beneficiary: Individual
 ---
 include:
@@ -21,9 +21,9 @@ code: |
     review_household_members
 
   recordee.name.first
-  if overpaid_persons.there_are_any:
-    overpaid_persons.there_is_another
-
+  overpaid_persons.there_are_any
+  review_overpaid_persons
+  
   overpayment_reason
   if informed_ssa:
     benefits_changed_after_contact
@@ -116,6 +116,32 @@ fields:
     required: False
   - Last name: overpaid_persons[i].name.last
   - Social Security Number: overpaid_persons[i].ssn
+---
+generic object: Individual
+question: |
+  Social Security Number for ${x}
+subquestion: |
+  What is ${x}'s Social Security Number?
+fields:
+  - SSN: x.ssn
+---
+question: |
+  Overpaid Persons
+subquestion: |
+  ${ overpaid_persons.table }
+  ${overpaid_persons.add_action()}
+field: review_overpaid_persons
+---
+table: overpaid_persons.table
+rows: overpaid_persons
+columns:
+  - Name: |
+      row_item
+  - Social Security Number: |
+      row_item.ssn
+edit:
+  - row_item.name.first
+  - row_item.ssn
 ---
 question: |
   Who is the ${ordinal(i)} overpaid person?  
@@ -345,20 +371,22 @@ fields:
     datatype: area
     required: False
 ---
+generic object: Individual
 question: |
-  Your contact information
+  ${x}'s Contact Information
 fields:
-  - Work phone number: client.work_number
-  - Home phone number: client.home_number
-  - Address: client.address.address
+  - Work phone number: x.phone_work
+    required: False
+  - Home or cell phone number: x.phone_number
+  - Address: x.address.address
     address autocomplete: True
-  - Unit or Apt: client.address.unit
-  - City: client.address.city
-  - State: client.address.state
+  - Unit or Apt: x.address.unit
+  - City: x.address.city
+  - State: x.address.state
     code: |
       states_list()
-  - Zip code: client.address.zip
-  - County: client.address.county
+  - Zip code: x.address.zip
+  - County: x.address.county
     required: False
 ---
 question: |
@@ -468,14 +496,14 @@ attachment:
       - "overpayment_receive_ssi_affordable_amount": ${affordable_amount}
       - "rep_received_benefits_no": ${noyes(overpayment_is_rep_payee)}
       - "rep_received_benefits_yes": ${yesno(overpayment_is_rep_payee)}
-      - "beneficiary_name": ${beneficiary + ' ' + beneficiary.address.block() }
+      - "beneficiary_name": ${beneficiary.name.full() + ' ' + beneficiary.address.block() }
       - "benefits_used_for": ${ overpayment_benefits_used_for}
       - "someone_else_lived_with_user_yes": No 
       - "someone_else_lived_with_user_no": No
       - "someone_else_user_received_benefits_no": No
       - "someone_else_user_received_benefits_yes": No
       - "someone_else_overpayment_explanation": ${ overpayment_explanation }
-      - "why_thought_entitled": why thought entitled
+      - "why_thought_entitled": something
       - "told_ssa_yes": ${yesno(informed_ssa)}
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tel_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
@@ -492,7 +520,7 @@ attachment:
       - "possessed_money_yes": No
       - "possessed_money_amount": something
       - "possessed_money_no": No
-      - "why_can_keep": 9. 
+      - "why_can_keep": something
       - "gave_away_yes": No
       - "gave_away_no": No
       - "gave_away_details": No
@@ -555,7 +583,7 @@ attachment:
       - "asset_other_description": something
       - "countable_asset_total_amount": ${assets.balance_total()}
       - "countable_asset_total_monthly": ${assets.total(period_to_use=12)}
-      - "vehicle_owner_1": ${comma_and_list(vehicles.item(0).owner)}
+      - "vehicle_owner_1": ${vehicles.item(0).owner}
       - "vehicle_year_make_model_1": ${vehicles.item(0).year_make_model() }
       - "vehicle_pv_1": ${vehicles.item(0).value}
       - "vehicle_loan_balance_1": ${vehicles.item(0).balance}
@@ -609,25 +637,25 @@ attachment:
       - "receive_support_yes": ${yesno(receives_support)}
       - "receive_support_no": ${noyes( receives_support)}
       - "receive_support_source": ${comma_and_list(support_sources)}
-      - "receive_support_amount": ${client.jobs.total(type='other') + spouse.jobs.total(type='other') + household.jobs.total(type='other')}
+      - "receive_support_amount": ${client.incomes.total(type='other support') + spouse.incomes.total(type='other support') + household.incomes.total(type='other support')}
       - "user_net_pay_total": ${client.jobs.net_total(period_to_use=12)}
       - "spouse_net_pay_total": ${spouse.jobs.net_total(period_to_use=12)}
       - "dependent_net_pay_total": ${household.jobs.net_total(period_to_use=12)}
-      - "user_ss_total": ${client.incomes.net_total(period_to_use=12, type='SSR')}
-      - "spouse_ss_total": ${spouse.incomes.net_total(period_to_use=12, type='SSR')}
-      - "dependent_ss_total": ${household.incomes.net_total(period_to_use=12, type='SSR')}
-      - "spouse_ssi_total": ${spouse.incomes.net_total(period_to_use=12, type='SSI')}
-      - "user_ssi_total": ${client.incomes.net_total(period_to_use=12, type='SSI')}
-      - "dependent_ssi_total": ${household.incomes.net_total(period_to_use=12, type='SSI')}
-      - "pension_type_1": ${', '.join([client_pensions.item(0).name,spouse_pensions.item(0).name,household_pensions.item(0).name])}
+      - "user_ss_total": ${client.incomes.total(period_to_use=12, type='SSR')}
+      - "spouse_ss_total": ${spouse.incomes.total(period_to_use=12, type='SSR')}
+      - "dependent_ss_total": ${household.incomes.total(period_to_use=12, type='SSR')}
+      - "spouse_ssi_total": ${spouse.incomes.total(period_to_use=12, type='SSI')}
+      - "user_ssi_total": ${client.incomes.total(period_to_use=12, type='SSI')}
+      - "dependent_ssi_total": ${household.incomes.total(period_to_use=12, type='SSI')}
+      - "pension_type_1": ${client_pensions.item(0).name + spouse_pensions.item(0).name + household_pensions.item(0).name}
       - "user_pension_1": ${client_pensions.item(0).amount(period_to_use=12)}
       - "spouse_pension_1": ${spouse_pensions.item(0).amount(period_to_use=12)}
       - "dependent_pension_1": ${household_pensions.item(0).amount(period_to_use=12)}
-      - "pension_type_2": ${', '.join([client_pensions.item(1).name, spouse_pensions.item(1).name, household_pensions.item(1).name])}
+      - "pension_type_2": ${client_pensions.item(1).name.full() + ' ' + spouse_pensions.item(1).name.full() + ' ' +  household_pensions.item(1).name.full()}
       - "user_pension_2": ${client_pensions.item(1).amount(period_to_use=12)}
       - "spouse_pension_2": ${spouse_pensions.item(1).amount(period_to_use=12)}
       - "dependent_pension_2": ${household_pensions.item(1).amount(period_to_use=12)}
-      - "other_assistance_type": ${incomes.matches('public assistance').item(0).name}
+      - "other_assistance_type": ${client.incomes.matches('public assistance').item(0).name + ' ' + spouse.incomes.matches('public assistance').item(0).name + household.incomes.matches('public assistance').item(0).name}
       - "user_other_assistance": ${client.incomes.total(type='public assistance',period_to_use=12)}
       - "spouse_other_assistance": ${spouse.incomes.total(type='public assistance',period_to_use=12)}
       - "dependent_other_assistance": ${household.incomes.total(type='public assistance',period_to_use=12)}
@@ -639,7 +667,7 @@ attachment:
       - "dependent_rent_income_total": ${household.incomes.total(type='rent',period_to_use=12)}
       - "user_room_board_total": ${client.incomes.total(type='room and board',period_to_use=12)}
       - "spouse_room_board_total": ${spouse.incomes.total(type='room and board',period_to_use=12)}
-      - "dependent_room_board_total": ${dependent.incomes.total(type='room and board',period_to_use=12)}
+      - "dependent_room_board_total": ${household.incomes.total(type='room and board',period_to_use=12)}
       - "user_child_support_total": ${client.incomes.total(type='child support',period_to_use=12)}
       - "spouse_child_support_total": ${spouse.incomes.total(type='child support',period_to_use=12)}
       - "dependent_child_support_total": ${household.incomes.total(type='child support',period_to_use=12)}
@@ -699,7 +727,7 @@ attachment:
       - "remarks_continued_more": something
       - "signature_date": ${today()}
       - "phone_work": ${client.phone_work}
-      - "phone_home": ${client.phone_home}
+      - "phone_home": ${client.phone_number}
       - "user_mailing_address": ${client.address.address}
       - "user_city_state": ${client.address.city + ' ' + client.address.state}
       - "user_zip": ${ client.address.zip}

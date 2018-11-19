@@ -13,9 +13,13 @@ objects:
   - household.jobs: JobList.using(complete_attribute='value', there_is_another=False)
   - household.incomes: IncomeList().using(complete_attribute='value',there_is_another=False)  
   - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
-  - vehicles: ValueList.using(there_is_another=False,complete_attribute='value')
+  - vehicles: VehicleList.using(there_is_another=False,complete_attribute='value')
   - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
   - expenses: IncomeList.using(there_is_another=False,complete_attribute='type')
+  - client.jobs: JobList.using(complete_attribute='value',there_is_another=False)
+  - spouse.jobs: JobList.using(complete_attribute='value',there_is_another=False)
+  - client.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
+  - spouse.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
 ---
 code: |
   household[i].name.first
