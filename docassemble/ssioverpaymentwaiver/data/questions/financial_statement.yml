@@ -8,18 +8,19 @@ objects:
   - spouse: Individual 
   - household: DAList.using(object_type=Individual,
                             there_is_another=False,
+                            ask_number = True,
                             complete_attribute='complete')
   - everyone: DAList.using(auto_gather=False)                         
-  - household.jobs: JobList.using(complete_attribute='value', there_is_another=False)
-  - household.incomes: IncomeList().using(complete_attribute='value',there_is_another=False)  
+  - household.jobs: JobList.using(auto_gather = False)
+  - household.incomes: IncomeList().using(auto_gather = False)  
   - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
   - vehicles: VehicleList.using(there_is_another=False,complete_attribute='value')
   - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
   - expenses: IncomeList.using(there_is_another=False,complete_attribute='type')
-  - client.jobs: JobList.using(complete_attribute='value',there_is_another=False)
-  - spouse.jobs: JobList.using(complete_attribute='value',there_is_another=False)
-  - client.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
-  - spouse.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
+  #- client.jobs: JobList.using(complete_attribute='value')
+  #- spouse.jobs: JobList.using(complete_attribute='value')
+  #- client.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
+  #- spouse.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
 ---
 code: |
   household[i].name.first
@@ -42,22 +43,38 @@ code: |
     spouse.jobs.there_are_any = False
     spouse.incomes.there_are_any = False
   if household.there_are_any:
+    household.target_number
     review_household_members
+  
   everyone
   
   if client.jobs.there_are_any:
+    client.jobs.there_is_another
     client.review_jobs
   if client.incomes.there_are_any:
+    client.income_types
+    client.add_incomes
+    client.incomes.gathered = True
     client.review_incomes
   if has_spouse and spouse.jobs.there_are_any:
+    spouse.jobs.there_is_another
     spouse.review_jobs
   if has_spouse and spouse.incomes.there_are_any:
+    spouse.income_types
+    spouse.add_incomes
+    spouse.incomes.gathered = True
     spouse.review_incomes
-    
-  if household.there_are_any and household.jobs.there_are_any:
-    household.review_jobs
-  if household.there_are_any and household.incomes.there_are_any:
-    household.review_incomes
+
+  for person in household:
+    person.income_types
+    person.add_incomes
+    person.incomes.gathered = True
+    person.review_incomes
+
+  #if household.there_are_any and household.jobs.there_are_any:
+  #  household.review_jobs
+  #if household.there_are_any and household.incomes.there_are_any:
+  #  household.review_incomes
 
   if assets.there_are_any:
     review_assets
@@ -74,6 +91,22 @@ code: |
   financial_statement_questions = True
 ---
 code: |
+  if household.there_are_any:
+    for person in household:
+      for job in person.jobs:
+        job.whose_job = person
+        household.jobs.append(job)
+  household.jobs.gathered = True
+---
+code: |
+  if household.there_are_any:
+    for person in household:
+      for income in person.incomes:
+        income.recipient = person
+        household.incomes.append(income)
+  household.incomes.gathered = True
+---
+code: |
   everyone.append(client)
   if has_spouse:
     everyone.append(spouse)
@@ -85,8 +118,18 @@ question: |
 fields:
   - My spouse: has_spouse
     datatype: yesno
-  - Other family members: household.there_are_any
+  - Other people who depend on me for support: household.there_are_any
     datatype: yesno
+---
+question: |
+  Other than your spouse, how many people live with you?
+subquestion: |
+  Include minor children or anyone else who lives with you and depends on you
+  for support. You do not need to list a roommate.
+fields:
+  - no label: household.target_number
+    datatype: integer
+    min: 1
 ---
 question: |
   What is your name?
@@ -105,13 +148,26 @@ fields:
   - Last name: spouse.name.last
 ---
 question: |
-  Who is the ${ ordinal(i) } person who lives with you?
+  Who is the ${ ordinal(i) } person who lives with you?  
 fields:
   - First Name: household[i].name.first  
   - Last Name: household[i].name.last
   - Age: household[i].age
     datatype: integer
   - Relationship to ${client}: household[i].relationship
+    input type: combobox
+    choices:
+      - Child
+      - Foster child
+      - Step child
+      - Sibling
+      - Parent
+      - Sibling of parent
+      - Grandparent
+      - Unmarried partner
+      - Unrelated
+  - Does this person depend on ${client} for support?: household[i].dependent
+    datatype: yesnoradio    
 ---
 table: household.table
 rows: household
@@ -136,6 +192,11 @@ subquestion: |
   ${ x.jobs.table }
   ${ x.jobs.add_action() }
 field: x.review_jobs
+---
+generic object: Individual
+question: |
+  Does ${x} have another job?
+yesno: x.jobs.there_is_another
 ---
 question: |
   Jobs of other household members
@@ -190,41 +251,38 @@ field: review_vehicles
 ---
 generic object: Individual
 question: |
-  Does ${x} earn money from working?
+  ${x}'s income
 subquestion: |
-  Answer yes if ${x} earns any money from work, including working for a boss at
-  an hourly or salaried rate, working for themself, or odd jobs such as babysitting.
-yesno: x.jobs.there_are_any
----
-question: |
-  Does anyone in the household other than you or your spouse earn money from working?
-subquestion: |
-  Answer yes if a household member earns any money from work, including working for a boss at
-  an hourly or salaried rate, working for themself, or odd jobs such as babysitting.
-yesno: household.jobs.there_are_any
+fields:
+  - ${x} earns money from working at a job, self-employment or odd-jobs such as babysitting: x.jobs.there_are_any
+    datatype: yesno
+  - ${x} receives money that is not from working: x.incomes.there_are_any
+    datatype: yesno
 ---
 generic object: Individual
 question: |
-  Does ${x} earn any money that is _not_ from working?
-subquestion: |
-  Answer yes if ${x} has any other source of income. 
-  
-  Examples include:
-  
-  ${comma_and_list(non_wage_income_list().values())}
-  
-yesno: x.incomes.there_are_any
+  ${x}'s income
+subquestion: |  
+  What kinds of income does ${x} get? Include money that ${x} gets from any
+  source.
+fields:
+  - Money earned from a job or self-employment: x.jobs.there_are_any
+    datatype: yesno
+  - Money that isn't from a job: x.income_types
+    datatype: checkboxes
+    code: |
+      non_wage_income_list()  
 ---
-question: |
-  Does anyone in the household other than you or your spouse earn any money that is _not_ from working?
-subquestion: |
-  Answer yes if a household member has any other source of income. 
-  
-  Examples include:
-  
-  ${comma_and_list(non_wage_income_list().values())}
-  
-yesno: household.incomes.there_are_any
+generic object: Individual
+code: |
+  x.incomes.there_are_any = x.income_types.any_true()
+---
+generic object: Individual
+code: |
+  if x.income_types.any_true():
+    for type in x.income_types.true_values():
+      x.incomes.appendObject(type=type)
+  x.add_incomes = True       
 ---
 question: |
   Does anyone in your household own any assets?
@@ -313,11 +371,44 @@ fields:
     code: |
       period_list()
 ---
+if: |
+  hasattr(x.incomes[i],'type')
+comment: |
+  This version of the question will display if the user has pre-checked the
+  income type.
 generic object: Individual
 question: | 
-  Non-employment income
+  ${x}'s ${(income_type_list()[x.incomes[i].type]).lower()} income
 subquestion: |
-  Tell me about ${ x }'s ${ ordinal(i) } income source that isn't a job.
+  How much does ${x} get from ${(income_type_list()[x.incomes[i].type]).lower()}?
+  If ${x} gets money from more than one ${(income_type_list()[x.incomes[i].type]).lower()},
+  you will have a chance to add more later.
+fields: 
+  - Please describe the kind or name of pension plan: x.incomes[i].name
+    show if:
+      code: |
+        x.incomes[i].type ==  "pension"
+  - Name of the public benefits program: x.incomes[i].name
+    show if:
+      code: |
+        x.incomes[i].type ==  "public assistance"
+  - Source of the other support: x.incomes[i].name
+    show if:
+      code: |
+        x.incomes[i].type ==  "other support"      
+  - Amount: x.incomes[i].value
+    datatype: currency
+  - How often does ${x.name.first} receive it?: x.incomes[i].period
+    default: 12
+    code: |
+      period_list()
+
+---
+generic object: Individual
+if: |
+  not hasattr(x.incomes[i],'type')
+question: | 
+  Tell me about the ${ ordinal(i) } kind of income ${x} gets.
 fields: 
   - Where is the income received from?: x.incomes[i].type
     code: |
@@ -333,39 +424,10 @@ fields:
   - Source of the other support: x.incomes[i].name
     show if:
       variable: x.incomes[i].type
-      is: "other"
+      is: "other support"      
   - Amount: x.incomes[i].value
     datatype: currency
-  - How often does ${x.name.first} receive it?: x.incomes[i].period
-    default: 12
-    code: |
-      period_list()
----
-question: | 
-  Tell me about the ${ ordinal(i) } income your other household members receive
-  that isn't a job.
-fields: 
-  - Where is the income received from?: household.incomes[i].type
-    code: |
-      non_wage_income_list()
-  - Please describe the kind or name of pension plan: household.incomes[i].name
-    show if:
-      variable: household.incomes[i].type
-      is: "pension"
-  - Name of the public benefits program: household.incomes[i].name
-    show if:
-      variable: household.incomes[i].type
-      is: "public assistance"
-  - Source of the other support: household.incomes[i].name
-    show if:
-      variable: household.incomes[i].type
-      is: "other"      
-  - Who receives this income?: household.incomes[i].recipient
-    datatype: object
-    choices: household
-  - Amount: household.incomes[i].value
-    datatype: currency
-  - How often does the person receive it?: household.incomes[i].period
+  - How often does the person receive it?: x.incomes[i].period
     default: 12
     code: |
       period_list()

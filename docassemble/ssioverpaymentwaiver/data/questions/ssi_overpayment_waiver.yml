@@ -3,6 +3,10 @@ metadata:
   title: SSI Overpayment Waiver Request
   short title: Overpayment Waiver
 ---
+features:
+  question help button: True
+  default icons: material icons
+---
 objects:
   - recordee: Individual
   - overpaid_persons: DAList.using(object_type=Individual,there_is_another=False)
@@ -13,14 +17,25 @@ include:
 ---
 mandatory: True
 code: |
+  intro_screen
   client.name.first
-  client.work_number
+
+  recordee.name.first
+  recordee.ssn
+  agree_overpaid
+  if not agree_overpaid:
+    continue_anyway
+  if not recordee == client:
+    client_is_rep_payee
+  
+  
+  
+  client.address.address
   if has_spouse:
     spouse.name.first
   if household.there_are_any:
     review_household_members
 
-  recordee.name.first
   overpaid_persons.there_are_any
   review_overpaid_persons
   
@@ -46,28 +61,86 @@ code: |
   signature_choice
   
   download_form
+
 ---
 question: |
-  Person on whose record the overpayment occurred
+  Social Security Overpayment Waiver or Payment Change
+subquestion: |
+  This guided interview will help you appeal an overpayment
+  from the Social Security Administration.
+  
+  You may need detailed information about your finances,
+  including recent pay stubs and bank records, before
+  you begin.
+  
+  During this interview, we will ask you to provide
+  your Social Security Number and the Social Security Number
+  of people in your household. The Social Security Administration
+  needs this information to process your request.
+  Learn more about how we
+  protect your private information by clicking help.
+field: intro_screen
+help: |
+  All information sent to and from this server is encrypted
+  using military-grade security standards.
+  If you create an account on our system, your responses
+  will be encrypted on our server at all times.
+  Only someone with your password will be able to view the contents of your
+  interview. It's important to both keep your password
+  secure and not to lose it, because we will not be able
+  to retrieve your interview without it.
+---
+question: |
+  Who were the overpaid benefits for?
+subquestion:
+  List the name of the person who receives the Social
+  Security Benefits and whose account was overpaid.
+  Look at the letter you received from the SSA. 
+  List the person whose Social Security Number or Claim Number is on the letter.  
 fields:
-  - Somebody already mentioned: recordee
+  - Myself: recordee
     datatype: object
     disable others: True
     choices: |
-      everyone
+      [client]
   - First name: recordee.name.first
   - Middle name: recordee.name.middle
     required: False
   - Last name: recordee.name.last
+  - Social Security Number: recordee.ssn  
+---
+code: |
+  if recordee == client:
+    client_is_rep_payee = False
+---
+question: Do you agree that the Social Security Admininstration overpaid ${recordee}?
+subquestion: |
+  Answer yes even if you think the overpayment was not your fault.
+yesno: agree_overpaid
+---
+decoration: hand-paper
+question: |
+  This may not be the right form for you.
+subquestion: |
+  This form is used when you want the Social Security Administration to lower
+  the amount you owe them.
+  If you don't agree with the Social Security that an overpayment happened, you may 
+  want to appeal the overpayment instead. It's a good idea to talk to a lawyer.
+buttons:
+  - Keep going:
+      code: |
+        continue_anyway = True  
+  - Restart: restart
+  - Exit: exit
 ---
 question: |
-  Person on whose record the overpayment occurred
-fields:  
-  - Social Security Number: recordee.ssn
----
-question: |
-  Are you the representative payee?
-yesno: overpayment_is_rep_payee
+  Are you ${recordee}'s representative payee?
+subquestion: |
+  You said the overpayment was on ${recordee}'s account.
+  At the time the Social Security Admininistration says you 
+  were overpaid, were you a  
+  representative payee for ${recordee}?
+yesno: client_is_rep_payee
 ---
 question: |
   How were the overpaid benefits used?
@@ -97,14 +170,20 @@ fields:
     required: False      
 ---
 question: |
-  Overpaid person(s) making this request
+  Is anyone else using this request for waiver with you?
 subquestion: |
-  Is there anyone who was overpaid other than ${recordee} and who
-  is making this request?
+  If the Social Security Administration says that more than one person is
+  responsible for the alleged overpayment, they can use this form with you.
+  
+  If you think you and the other person may disagree about whose fault the
+  overpayment was, it may be safest for you each to use your own forms.
+  
+  Do you want to list someone else on this form with you who will also be asking the
+  Social Security Administration to waive the overpayment?
 yesno: overpaid_persons.there_are_any
 ---
 question: |
-  Who is the ${ordinal(i)} overpaid person?
+  Who is the ${ordinal(i)} person who will use the form with you?
 fields:
   - Somebody already mentioned: overpaid_persons[i]
     datatype: object
@@ -123,11 +202,14 @@ question: |
 subquestion: |
   What is ${x}'s Social Security Number?
 fields:
-  - SSN: x.ssn
+  - SSN: x.ssn  
 ---
 question: |
   Overpaid Persons
 subquestion: |
+  So far you have told us about ${overpaid_persons.number()} people who will
+  be listed on this form with you. You can add another person, or click
+  continue to go to the next question.
   ${ overpaid_persons.table }
   ${overpaid_persons.add_action()}
 field: review_overpaid_persons
@@ -157,7 +239,17 @@ fields:
     datatype: yesnoradio
 ---
 question: |
-  What kind of Social Security payments do you receive?
+  Are you currently receiving any needs-based benefits?
+subquestion: |
+  Answer yes if you personally receive welfare benefits, SSI, or a state benefit that
+  is based on your need.
+yesno: receives_benefits  
+help: |
+  If you are receiving SSI or another benefit based on your need, you do not need
+  to give the Social Security Administration as much information about your finances.
+---
+question: |
+  What kind of Social Security payments does ${recordee} receive?
 field: payment_type
 choices:
   - Supplemental Security Income (SSI): SSI
@@ -233,8 +325,9 @@ subquestion: |
 fields:
   - What changed to cause the overpayment?: overpayment_reason
     choices:
-      - I had too much money in a bank account
-      - I worked too many hours
+      - ${recordee} had too much money in a bank account
+      - ${recordee} worked too many hours
+      - ${recordee} went out of the country for more than 30 days
   - What do you know about how the overpayment happened?: overpayment_explanation
     datatype: area
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
@@ -375,12 +468,13 @@ generic object: Individual
 question: |
   ${x}'s Contact Information
 fields:
+  - Home or cell phone number: x.phone_number
   - Work phone number: x.phone_work
     required: False
-  - Home or cell phone number: x.phone_number
   - Address: x.address.address
     address autocomplete: True
   - Unit or Apt: x.address.unit
+    required: False
   - City: x.address.city
   - State: x.address.state
     code: |
