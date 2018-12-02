@@ -17,10 +17,6 @@ objects:
   - vehicles: VehicleList.using(there_is_another=False,complete_attribute='value')
   - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
   - expenses: IncomeList.using(there_is_another=False,complete_attribute='type')
-  #- client.jobs: JobList.using(complete_attribute='value')
-  #- spouse.jobs: JobList.using(complete_attribute='value')
-  #- client.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
-  #- spouse.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
 ---
 code: |
   household[i].name.first
@@ -28,7 +24,7 @@ code: |
 ---
 generic object: Individual
 objects:
-  - x.jobs: JobList.using(complete_attribute='value',there_is_another=False)
+  - x.jobs: JobList.using(complete_attribute='value')
   - x.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
 ---
 comment: |
@@ -45,10 +41,14 @@ code: |
   if household.there_are_any:
     household.target_number
     review_household_members
+  else:
+    household.target_number = 0
+    household.gathered=True    
   
   everyone
   
   if client.jobs.there_are_any:
+    client.jobs[0]
     client.jobs.there_is_another
     client.review_jobs
   if client.incomes.there_are_any:
@@ -57,6 +57,7 @@ code: |
     client.incomes.gathered = True
     client.review_incomes
   if has_spouse and spouse.jobs.there_are_any:
+    spouse.jobs[0]
     spouse.jobs.there_is_another
     spouse.review_jobs
   if has_spouse and spouse.incomes.there_are_any:
@@ -69,26 +70,30 @@ code: |
     person.income_types
     person.add_incomes
     person.incomes.gathered = True
-    person.review_incomes
+    if person.incomes.there_are_any:
+      person.review_incomes
 
-  #if household.there_are_any and household.jobs.there_are_any:
-  #  household.review_jobs
-  #if household.there_are_any and household.incomes.there_are_any:
-  #  household.review_incomes
-
+  assets.asset_types
+  assets.add_assets
+  assets.gathered = True
   if assets.there_are_any:
     review_assets
     
   if real_estate.there_are_any:
     review_real_estate
 
-  expenses.there_are_any
-  review_expenses  
+  expenses_types
+  add_expenses
+  expenses.gathered=True
+  review_expenses
   
   if vehicles.there_are_any:
     review_vehicles
 
   financial_statement_questions = True
+---
+code: |
+  assets.there_are_any = assets.type_list.any_true()
 ---
 code: |
   if household.there_are_any:
@@ -284,41 +289,74 @@ code: |
       x.incomes.appendObject(type=type)
   x.add_incomes = True       
 ---
-question: |
-  Does anyone in your household own any assets?
-subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-  
-  Examples of assets include:  ${comma_and_list(asset_type_list().values())}
-yesno: assets.there_are_any
+code: |
+  assets.there_are_any = assets.asset_types.any_true()  
+---
+code: |
+  if assets.asset_types.any_true():
+    for type in assets.asset_types.true_values():
+      assets.appendObject(type=type)
+  assets.add_assets = True
 ---
 question: |
-  Does anyone in your household own any vehicles?
+  Assets (accounts and things that you may own)
 subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-  
-  Answer "no" if the only vehicle is the family car.
-  Examples include motorcycles, boats, and cars _other than_ the family car.
-yesno: vehicles.there_are_any
+  Does anyone in your household who depends on you, or either yourself or
+  your spouse, own any of the following?
+fields:
+  - Real estate other than the house you live in: real_estate.there_are_any
+    datatype: yesno
+  - Cars, motorcycles, boats or other vehicles other than your family car: vehicles.there_are_any
+    help: |
+      Answer yes if someone owns a car, motorcyle, boat or any other vehicle
+    datatype: yesno
+  - Other assets: assets.asset_types
+    datatype: checkboxes
+    code: |
+      asset_type_list()
+    exclude: |
+      ['real estate','vehicle']      
 ---
 question: |
-  Does anyone in your household own any real estate?
-subquestion: |
-  Include yourself, your spouse, and any other person who is part of your household.
-
-  Answer "yes" if anyone in the household owns any buildings or land, _other than_ 
-  the home that you live in.
-yesno: real_estate.there_are_any  
+  What kind of expenses do you have?
+fields:
+  - no label: expenses_types
+    datatype: checkboxes
+    code: |
+      expense_type_list()
+---
+code: |
+  if expenses_types.any_true():
+    for type in expenses_types.true_values():
+      expenses.appendObject(type=type)
+  expenses.gathered = True      
+  add_expenses = True     
 ---
 question: |
-  Household expenses
+  How much do you spend on your ${ordinal(i)} household expense?
+fields:
+  - Type of expense: expenses[i].type
+    code: |
+      expense_type_list()
+  - Amount: expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: expenses[i].period
+    default: 12
+    code: |
+      period_list()
+---
+question: |
+  How much do you spend on '${(expense_type_list()[expenses[i].type]).lower()}'?
 subquestion: |
-  On the next screen, you'll have a chance to list your household expenses.
-  
-  Examples include ${comma_and_list(expense_type_list().values())}.
-field: expenses.there_are_any
-comment: |
-  Everyone has at least one household expense.
+  If you have more than one '${(expense_type_list()[expenses[i].type]).lower()}'
+  expense in your household, you'll have a chance to add another later on.
+fields:
+  - Amount: expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: expenses[i].period
+    default: 12
+    code: |
+      period_list()
 ---
 generic object: Individual
 question: | 
@@ -432,17 +470,43 @@ fields:
     code: |
       period_list()
 ---
+if: |
+  hasattr(assets[i],'type')
+comment: |
+  assets
+question: |
+  Information about the first ${asset_type_list()[assets[i].type]}
+subquestion: |
+  Select more than one owner if both people own _this_ ${asset_type_list()[assets[i].type]}. 
+  You'll be able to add more accounts later.
+fields:
+  - Owner(s): assets[i].owner
+    datatype: object_checkboxes
+    none of the above: False
+    choices: everyone
+  - Balance : assets[i].balance
+    datatype: currency
+  - Interest or other Income: assets[i].value
+    datatype: currency
+  - Income is received: assets[i].period
+    code: |
+      period_list()
+---
+if: |
+  not hasattr(assets[i],'type')
 comment: |
   assets
 question: |
   Describe the ${ordinal(i) } asset owned by you and your household members.
 subquestion: |
-  Select more than one owner if both people own this asset. You'll be able to 
+  Select more than one owner if both people own this exact asset. You'll be able to 
   list more accounts for different members of your household later.
 fields:
   - What type of asset is it?: assets[i].type
     code: |
       asset_type_list()
+    exclude: |
+      ['real estate','vehicle']      
   - Owner(s): assets[i].owner
     datatype: object_checkboxes
     none of the above: False
@@ -511,6 +575,26 @@ fields:
     code: |
       period_list()
 ---
+if: |
+  hasattr(expenses[i],'type')
+comment: |
+  expenses
+question: |
+  Amount spent on ${expense_type_list()[expenses[i].type]}
+subquestion: |
+  List the amount you spend on ${expense_type_list()[expenses[i].type]}. If you
+  have more than one expense for ${expense_type_list()[expenses[i].type]}, you can
+  add another later.
+fields:
+  - Amount: expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: expenses[i].period
+    default: 12
+    code: |
+      period_list()
+---
+if: |
+  not hasattr(expenses[i],'type')
 comment: |
   expenses
 question: |
