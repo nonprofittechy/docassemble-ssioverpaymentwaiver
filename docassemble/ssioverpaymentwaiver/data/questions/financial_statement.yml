@@ -10,7 +10,8 @@ objects:
                             there_is_another=False,
                             ask_number = True,
                             complete_attribute='complete')
-  - everyone: DAList.using(auto_gather=False)                         
+  - everyone: DAList.using(auto_gather=False)
+  - everyone_but_me: DAList.using(auto_gather=False)                         
   - household.jobs: JobList.using(auto_gather = False)
   - household.incomes: IncomeList().using(auto_gather = False)  
   - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
@@ -24,13 +25,12 @@ code: |
 ---
 generic object: Individual
 objects:
-  - x.jobs: JobList.using(complete_attribute='value')
+  - x.jobs: JobList.using(complete_attribute='period')
   - x.incomes: IncomeList.using(complete_attribute='value',there_is_another=False)
 ---
 comment: |
-  This block sets the order the questions are asked in the interview.
-  In particular, it lets us use a table to collect the lists of income/assets/expenses
-  which is a little more natural than "is_there_another" approach to list gathering.
+  This block and the next set the order the questions are asked in the interview.
+  To make use of it, mention household_questions and financial_statement_questions in a mandatory code block or need statement
 code: |
   client.name.first
   if has_spouse:
@@ -41,15 +41,19 @@ code: |
   if household.there_are_any:
     household.target_number
     review_household_members
+    household.gathered = True
   else:
     household.target_number = 0
     household.gathered=True    
   
   everyone
-  
+  everyone_but_me
+  household_questions = True
+---
+code: |
   if client.jobs.there_are_any:
-    client.jobs[0]
-    client.jobs.there_is_another
+    #client.jobs[0]
+    #client.jobs.there_is_another
     client.review_jobs
   if client.incomes.there_are_any:
     client.income_types
@@ -57,8 +61,8 @@ code: |
     client.incomes.gathered = True
     client.review_incomes
   if has_spouse and spouse.jobs.there_are_any:
-    spouse.jobs[0]
-    spouse.jobs.there_is_another
+    #spouse.jobs[0]
+    #spouse.jobs.there_is_another
     spouse.review_jobs
   if has_spouse and spouse.incomes.there_are_any:
     spouse.income_types
@@ -66,12 +70,7 @@ code: |
     spouse.incomes.gathered = True
     spouse.review_incomes
 
-  for person in household:
-    person.income_types
-    person.add_incomes
-    person.incomes.gathered = True
-    if person.incomes.there_are_any:
-      person.review_incomes
+  collected_household_incomes
 
   assets.asset_types
   assets.add_assets
@@ -91,6 +90,15 @@ code: |
     review_vehicles
 
   financial_statement_questions = True
+---
+code: |
+  for person in household:
+    person.income_types
+    person.add_incomes
+    person.incomes.gathered = True
+    if person.incomes.there_are_any:
+      person.review_incomes
+  collected_household_incomes = True
 ---
 code: |
   assets.there_are_any = assets.type_list.any_true()
@@ -118,6 +126,12 @@ code: |
   everyone.extend(household)
   everyone.gathered = True
 ---
+code: |
+  if has_spouse:
+    everyone_but_me.append(spouse)
+  everyone_but_me.extend(household)
+  everyone_but_me.gathered = True
+---
 question: |
   Who lives with you?
 fields:
@@ -127,14 +141,14 @@ fields:
     datatype: yesno
 ---
 question: |
-  Other than your spouse, how many people live with you?
+  Other than your spouse, how many people live with you who depend on you?
 subquestion: |
   Include minor children or anyone else who lives with you and depends on you
   for support. You do not need to list a roommate.
 fields:
   - no label: household.target_number
     datatype: integer
-    min: 1
+    min: 0
 ---
 question: |
   What is your name?
@@ -171,14 +185,16 @@ fields:
       - Grandparent
       - Unmarried partner
       - Unrelated
-  - Does this person depend on ${client} for support?: household[i].dependent
-    datatype: yesnoradio    
+  #- Does this person depend on ${client} for support?: household[i].dependent
+  #  datatype: yesnoradio    
 ---
 table: household.table
 rows: household
 columns:
   - Name: |
       row_item.name.full()
+  - Age: |
+      row_item.age      
 edit:
   - name.first
 ---
@@ -200,7 +216,7 @@ field: x.review_jobs
 ---
 generic object: Individual
 question: |
-  Does ${x} have another job?
+  So far you've told us about ${x.jobs.number()} jobs. Does ${x} have another job?
 yesno: x.jobs.there_is_another
 ---
 question: |
@@ -228,6 +244,8 @@ field: household.review_incomes
 question: |
   Assets from you and your household members
 subquestion: |
+  So far you've told us about ${assets.number()} asset(s).
+  You can add more or click continue to go to the next question.
   ${ assets.table }
   ${ assets.add_action() }
 field: review_assets
@@ -236,6 +254,7 @@ question: |
   Real estate owned by you or your household members
 subquestion: |
   So far you've listed ${len(real_estate)} ${noun_plural('property',len(real_estate))}.
+  You can add more or click continue to go to the next question.
   ${ real_estate.table }
   ${ real_estate.add_action() }
 field: review_real_estate
@@ -301,8 +320,7 @@ code: |
 question: |
   Assets (accounts and things that you may own)
 subquestion: |
-  Does anyone in your household who depends on you, or either yourself or
-  your spouse, own any of the following?
+  Do you, your spouse, or someone in your household own any of the following?
 fields:
   - Real estate other than the house you live in: real_estate.there_are_any
     datatype: yesno
@@ -346,9 +364,9 @@ fields:
       period_list()
 ---
 question: |
-  How much do you spend on '${(expense_type_list()[expenses[i].type]).lower()}'?
+  How much do you spend on '${(expense_type_list()[expenses[i].type])}'?
 subquestion: |
-  If you have more than one '${(expense_type_list()[expenses[i].type]).lower()}'
+  If you have more than one '${(expense_type_list()[expenses[i].type])}'
   expense in your household, you'll have a chance to add another later on.
 fields:
   - Amount: expenses[i].value
@@ -362,11 +380,10 @@ generic object: Individual
 question: | 
   Tell me about ${ x }'s ${ ordinal(i) } job.
 subquestion: |  
-  You should look
-  at ${ x }'s most recent pay stubs to answer this question.
-  You need to provide both the 'net' (take home) and 'gross' (amount before
-  taxes and deductions). If this is self-employment or an odd job,
-  'net' should be the amount ${x} keeps after self-employment taxes.
+  Look at ${ x }'s most recent pay stubs to answer this question.
+  The Social Security Administration needs to know both the gross pay and the 
+  amount you take home after taxes and deductions.
+
 fields:
   - Employer's name: x.jobs[i].employer
   - Address of employer: x.jobs[i].employer_address
@@ -374,10 +391,19 @@ fields:
     address autocomplete: True
   - Phone number of employer: x.jobs[i].employer_phone
     required: False
-  - Net (take home) earnings each typical pay check: x.jobs[i].net
+  - Is this an hourly job?: x.jobs[i].is_hourly
+    datatype: yesno
+  - Hourly rate: x.jobs[i].hourly_rate
     datatype: currency
-  - Gross earnings each typical pay check: x.jobs[i].value
+    show if: x.jobs[i].is_hourly
+  - Average number of hours worked each pay check: x.jobs[i].hours_per_period
+    datatype: integer
+    show if: x.jobs[i].is_hourly        
+  - Take home pay (net pay) each typical pay check: x.jobs[i].net
+    datatype: currency    
+  - Gross pay each typical pay check: x.jobs[i].value
     datatype: currency
+    hide if: x.jobs[i].is_hourly
   - How often does ${x.name.first} receive a pay check?: x.jobs[i].period
     datatype: integer
     code: |
@@ -416,10 +442,10 @@ comment: |
   income type.
 generic object: Individual
 question: | 
-  ${x}'s ${(income_type_list()[x.incomes[i].type]).lower()} income
+  ${x}'s ${(income_type_list()[x.incomes[i].type])} income
 subquestion: |
-  How much does ${x} get from ${(income_type_list()[x.incomes[i].type]).lower()}?
-  If ${x} gets money from more than one ${(income_type_list()[x.incomes[i].type]).lower()},
+  How much does ${x} get from ${(income_type_list()[x.incomes[i].type])}?
+  If ${x} gets money from more than one ${(income_type_list()[x.incomes[i].type])},
   you will have a chance to add more later.
 fields: 
   - Please describe the kind or name of pension plan: x.incomes[i].name
@@ -489,6 +515,7 @@ fields:
   - Interest or other Income: assets[i].value
     datatype: currency
   - Income is received: assets[i].period
+    required: False
     code: |
       period_list()
 ---
@@ -615,7 +642,7 @@ table: x.incomes.table
 rows: x.incomes
 columns:
   - Type: |
-      row_item.type if defined('row_item.type') else ''
+      income_type_list()[row_item.type] if defined('row_item.type') else ''
   - Amount: |
       currency(row_item.amount())
 edit:
@@ -626,7 +653,7 @@ table: x.incomes.display_table
 rows: x.incomes
 columns:
   - Type: |
-      row_item.type if defined('row_item.type') else ''
+      income_type_list()[row_item.type] if defined('row_item.type') else ''
   - Amount: |
       currency(row_item.amount())
 ---
@@ -636,7 +663,7 @@ columns:
   - Recipient: |
       row_item.recipient
   - Type: |
-      row_item.type if defined('row_item.type') else ''      
+      income_type_list()[row_item.type] if defined('row_item.type') else ''      
   - Amount: |
       currency(row_item.amount())
 edit:
@@ -648,7 +675,7 @@ columns:
   - Recipient: |
       row_item.recipient
   - Type: |
-      row_item.type if defined('row_item.type') else ''      
+      income_type_list()[row_item.type] if defined('row_item.type') else ''      
   - Amount: |
       currency(row_item.amount())
 ---
@@ -737,7 +764,7 @@ columns:
   - Owner: |
       row_item.owner
   - Type: |
-      row_item.type
+      asset_type_list()[row_item.type]
   - Income: |
       currency(row_item.amount()) if (defined('row_item.value') and defined('row_item.period')) else ''
   - Current balance: |
@@ -761,7 +788,7 @@ columns:
   - Owner: |
       row_item.owner
   - Type: |
-      row_item.type
+      asset_type_list()[row_item.type]
   - Income: |
       currency(row_item.amount()) if (defined('row_item.value') and defined('row_item.period')) else ''
   - Current balance: |
@@ -801,7 +828,7 @@ table: expenses.table
 rows: expenses
 columns:
   - Type: |
-      row_item.type
+      expense_type_list()[row_item.type]
   - Amount/month: |
       currency(row_item.amount(period_to_use=12))
 edit:

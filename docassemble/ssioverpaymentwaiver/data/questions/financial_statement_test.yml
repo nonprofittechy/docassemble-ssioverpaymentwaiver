@@ -4,5 +4,7 @@ include:
 ---
 mandatory: True
 code: |
+  client.name.first
+  household_questions
   financial_statement_questions  
   financial_statement_download_screen

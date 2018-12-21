@@ -6,79 +6,145 @@ metadata:
 features:
   question help button: True
   default icons: material icons
+  navigation: True
 ---
 objects:
   - recordee: Individual
   - overpaid_persons: DAList.using(object_type=Individual,there_is_another=False)
   - beneficiary: Individual
 ---
+modules:
+  - .ssa
+---
 include:
   - financial_statement.yml
 ---
+sections:
+  - Getting started
+  - Who is requesting a waiver?
+  - Information about the overpayment
+  - Financial information
+  - Finishing up
+---
 mandatory: True
 code: |
+  nav.set_section('Getting started')
   intro_screen
   client.name.first
 
+  nav.set_section('Who is requesting a waiver?')
   recordee.name.first
   recordee.ssn
+  if not household.there_are_any:
+    household.target_number = 0
+    household.gathered = True
+  
+  beneficiary.name.first
+  if not recordee == client:
+    client_is_rep_payee
+  else:
+    client_is_rep_payee = False
+  
+  nav.set_section('Information about the overpayment')
+  payment_type
+  overpayment_reason
+  overpayment_explanation
   agree_overpaid
   if not agree_overpaid:
     continue_anyway
-  if not recordee == client:
-    client_is_rep_payee
+  overpayment_benefits_used_for    
   
-  
-  
-  client.address.address
   if has_spouse:
     spouse.name.first
   if household.there_are_any:
     review_household_members
 
-  overpaid_persons.there_are_any
-  review_overpaid_persons
+  if overpaid_persons.there_are_any:
+    review_overpaid_persons
   
-  overpayment_reason
+  if not possess_overpayment:
+    if possessed_overpayment_at_notice:
+      cant_return_explanation
+  else:
+    pay_ssa_explanation
+  
+  overpayment_pay_less_reasons
+  affordable_amount
+
   if informed_ssa:
+    if not informed_orally:
+      how_when_where
     benefits_changed_after_contact
+
   first_overpayment
 
-  possess_overpayment
-  payment_type
   gave_cash_after_notice
-  cant_return_explanation
-  affordable_amount
-  overpayment_pay_less_reasons
-  received_ssi
   expect_change
+  
+  nav.set_section('Financial information')
+  evaluate_if_receives_benefits # We may already know--use code to set if true
+  received_ssi
+  if receives_benefits:
+    receives_benefits_type
+    dont_need_financials_explanation
+    # Mark the unneeded financial objects empty so we can still fill the PDF
+    vehicles = DAEmpty()
+    household.jobs = DAEmpty()
+    household.incomes = DAEmpty()
+    client.jobs = DAEmpty()
+    client.incomes =  DAEmpty()
+    spouse.jobs = DAEmpty()
+    spouse.incomes = DAEmpty()
+    expenses = DAEmpty()
+    real_estate = DAEmpty()
+    assets = DAEmpty()
+    assets_cannot_be_sold = DAEmpty()
+    assets_cannot_be_converted = DAEmpty()
+    accounts_special_purpose = DAEmpty()
+    
+  else:
+    need_financials_explanation
+    financial_statement_questions
 
-  financial_statement_questions
-
-  accounts_special_purpose
-  assets_cannot_be_converted
-  assets_cannot_be_sold
+    accounts_special_purpose
+    assets_cannot_be_converted
+    assets_cannot_be_sold
+    
+  nav.set_section('Finishing up')
+  client.address.address
+  
   signature_choice
   
   download_form
-
+---
+code: |
+  if recordee.name.full() == client.name.full() and payment_type == 'SSI':
+    we_think_recordee_is_client = True
+    receives_benefits = True
+    receives_benefits_type_options = 'SSI'
+    receives_benefits_type = 'SSI'
+    receives_ssi = True
+    received_ssi = False
+  else:
+    we_think_recordee_is_client = False
+  evaluate_if_receives_benefits = True
 ---
 question: |
-  Social Security Overpayment Waiver or Payment Change
+  Social Security Overpayment Waiver or Change
 subquestion: |
-  This guided interview will help you appeal an overpayment
-  from the Social Security Administration.
+  This interview is for someone who has to pay back money to the Social Security
+  Administration (SSA). This money is called an "overpayment".
   
-  You may need detailed information about your finances,
-  including recent pay stubs and bank records, before
-  you begin.
+  You can use this interview to ask the SSA to let you pay back less money.
+  You can also ask them to let you have more time to pay them back.
   
-  During this interview, we will ask you to provide
-  your Social Security Number and the Social Security Number
-  of people in your household. The Social Security Administration
-  needs this information to process your request.
-  Learn more about how we
-  protect your private information by clicking help.
+  You might need to tell the SSA a lot about how you and people who depend on you
+  earn and spend money. You should get your bank statements, utility bills, and 
+  any pay stubs ready before you start.
+  
+  You will need to put your Social Security Number on this form. You are the only
+  person who can see it before you print and mail or deliver it. We will keep
+  your private information safe. Click help to learn more.
 field: intro_screen
 help: |
   All information sent to and from this server is encrypted
@@ -91,12 +157,13 @@ help: |
   to retrieve your interview without it.
 ---
 question: |
-  Who were the overpaid benefits for?
+  Who got too much money from Social Security?
 subquestion:
-  List the name of the person who receives the Social
-  Security Benefits and whose account was overpaid.
-  Look at the letter you received from the SSA. 
-  List the person whose Social Security Number or Claim Number is on the letter.  
+  Whose account is the overpayment on?
+  Look at the letter about the overpayment that you got from Social Security.
+  Look for a Social Security or Claim Number on the letter. Write down the name 
+  of the person who has that
+  Social Security number.
 fields:
   - Myself: recordee
     datatype: object
@@ -107,16 +174,27 @@ fields:
   - Middle name: recordee.name.middle
     required: False
   - Last name: recordee.name.last
-  - Social Security Number: recordee.ssn  
+  - Social Security Number: recordee.ssn
+    validate: is_valid_ssn
 ---
 code: |
   if recordee == client:
     client_is_rep_payee = False
 ---
-question: Do you agree that the Social Security Admininstration overpaid ${recordee}?
+code: |
+  expenses_exceed_income = expenses.total() > (client.incomes.total() + spouse.incomes.total() + household.incomes.total())
+    
+---
+question: |
+  Do you agree that ${recordee} got too much money from Social Security?
 subquestion: |
-  Answer yes even if you think the overpayment was not your fault.
-yesno: agree_overpaid
+  Choose the answer that best matches what you understand about what happened.
+  If you agree that ${recordee} was overpaid, you are _not_ agreeing that you
+  need to pay the Social Security Administration back.
+field: agree_overpaid
+choices:
+  - I disagree that ${overpayment_reason}. I think ${recordee} was paid the right amount: False
+  - I agree ${recordee} was paid too much, even if it was an accident.: True
 ---
 decoration: hand-paper
 question: |
@@ -150,6 +228,11 @@ fields:
 ---
 question: |
   Who is the beneficiary?
+subquestion: |
+  Sometimes the person who uses the benefits is different than the person
+  who earned them. For example, a spouse or dependent may get the benefits
+  earned by someone who worked who retired or became disabled.
+  If ${recordee} both earned and uses the benefits, just select their name here.
 fields:
   - Somebody already mentioned: beneficiary
     datatype: object
@@ -170,10 +253,10 @@ fields:
     required: False      
 ---
 question: |
-  Is anyone else using this request for waiver with you?
+  Is anyone else using this form with you?
 subquestion: |
-  If the Social Security Administration says that more than one person is
-  responsible for the alleged overpayment, they can use this form with you.
+  If the Social Security Administration says that more than one person has to
+  pay them back, they can use this form with you.
   
   If you think you and the other person may disagree about whose fault the
   overpayment was, it may be safest for you each to use your own forms.
@@ -189,12 +272,14 @@ fields:
     datatype: object
     disable others: True
     choices: |
-      everyone
+      everyone_but_me
   - First name: overpaid_persons[i].name.first
   - Middle name: overpaid_persons[i].name.middle
     required: False
   - Last name: overpaid_persons[i].name.last
   - Social Security Number: overpaid_persons[i].ssn
+    validate: is_valid_ssn
+
 ---
 generic object: Individual
 question: |
@@ -202,7 +287,14 @@ question: |
 subquestion: |
   What is ${x}'s Social Security Number?
 fields:
-  - SSN: x.ssn  
+  - SSN: x.ssn
+    validate: is_valid_ssn  
+under: |
+  {Why} do we need this?
+terms:
+  - Why: |
+      The Social Security Administration needs this number in order to 
+      apply this overpayment waiver request to the right account.
 ---
 question: |
   Overpaid Persons
@@ -229,53 +321,125 @@ question: |
   Who is the ${ordinal(i)} overpaid person?  
 fields:
   - Social Security Number: overpaid_persons[i].ssn
+    validate: is_valid_ssn
 ---
 question: |
   What happened to the overpaid checks or money?
 fields:
   - Do you currently have any of the money you were overpaid? : possess_overpayment
     datatype: yesnoradio
-  - When you received the overpayment notice, did you have any of the money you were overpaid?: possessed_overpayment_at_notice
-    datatype: yesnoradio
+  - How much do you still have?: possess_overpayment_amount
+    show if: possess_overpayment
+    datatype: currency
+    step: 1
 ---
 question: |
-  Are you currently receiving any needs-based benefits?
+  You will need to pay the Social Security Administration back
 subquestion: |
-  Answer yes if you personally receive welfare benefits, SSI, or a state benefit that
-  is based on your need.
+  The Social Security administration will ask you to pay back the ${currency(possess_overpayment_amount)}
+  that you said you still have from the overpayment. If that is less than the full 
+  amount of the overpayment you may still need to pay back more, but you can ask for a 
+  payment plan that works for you.
+field: pay_ssa_explanation
+---
+question: |
+  What happened to the overpaid checks or money?
+subquestion: |
+  You said you no longer have any of the money you were overpaid.
+fields: 
+  - When you got the overpayment notice, did you have any of the money you were overpaid?: possessed_overpayment_at_notice
+    datatype: yesnoradio
+  - How much did you have then?: possessed_overpayment_at_notice_amount
+    datatype: currency
+    step: 1
+    show if: possessed_overpayment_at_notice
+    
+---
+question: |
+  Are you currently receiving any needs-based cash benefits?
+subquestion: |
+  Answer yes if you personally receive cash welfare benefits, SSI, or a state cash 
+  benefit that is based on your need.
 yesno: receives_benefits  
 help: |
   If you are receiving SSI or another benefit based on your need, you do not need
   to give the Social Security Administration as much information about your finances.
 ---
 question: |
+  What kind of cash benefits are you receiving?
+fields: 
+  - no label: receives_benefits_type_options
+    choices:
+      - SSI
+      - TAFDC (Temporary Aid to Families with Dependent Children): TAFDC
+      - other
+  - Name of benefits program: receives_benefits_other
+    show if:
+      variable: receives_benefits_type_options
+      is: 'other'
+---
+code: |
+  if receives_benefits_type_options in ['SSI','TAFDC']:
+    receives_benefits_type = receives_benefits_type_options
+  else:
+    receives_benefits_type = receives_benefits_other
+---
+question: |
+  You don't need to give us your financial information
+subquestion: |
+  Because you are receiving ${receives_benefits_type}, you don't need to answer the
+  financial questions on this form. We'll finish asking for your contact information
+  and signature on the next few pages.
+field: dont_need_financials_explanation
+---
+question: |
+  We will need to collect your financial information
+subquestion: |
+  In the next section, we will need to ask detailed information about how you,
+  your spouse, and any household members earn money, as well as your household
+  expenses. You will need to list any money you or a household member earns from 
+  any source, including things like odd jobs, interest on bank accounts, and informal 
+  payments for household expenses.
+  
+  Take a minute to make sure you have any pay stubs, tax returns or receipts for
+  self-employment income, bank statements, and any monthly bills you pay.
+field: need_financials_explanation  
+---
+question: |
   What kind of Social Security payments does ${recordee} receive?
 field: payment_type
 choices:
   - Supplemental Security Income (SSI): SSI
-  - SSDI or Social Security Retirement: other
+  - Social Security Disability (SSDI): other
+  - Retirement benefits: other
 ---
 question: |
-  Acts you took after receiving the overpayment notice
+  What happened after you got the overpayment notice from Social Security?
+subquestion: |
+  Think about what happened after Social Security told you that ${recordee} got
+  too much money.
 fields:  
-  - Did you lend or give away any property or cash after you received notice of the overpayment?: gave_cash_after_notice
+  - Did you lend or give away any property or cash after the notice of overpayment?: gave_cash_after_notice
     datatype: yesnoradio
-  - Describe who received the property or cash, what it was and its value: gave_cash_after_notice_explanation
+  - Describe who got the property or cash, what it was and its value: gave_cash_after_notice_explanation
     datatype: area
     show if: gave_cash_after_notice
-  - Did you receive or sell any property or receive any cash, other than earnings, after you received the notice of overpayment?: received_cash_after_notice
+  - Did you get or sell any property or get any cash, (other than money you got from working), after the notice of overpayment?: received_cash_after_notice
     datatype: yesnoradio
   - Describe the property and sale price, or amount of cash received: received_cash_after_notice_explanation
     datatype: area
     show if: received_cash_after_notice
 ---
 question: |
-  Overpayment
+  Why can't you return the overpayment any more?
 subquestion: |
+  You said that when you got the notice, you still had 
+  ${ currency(possessed_overpayment_at_notice_amount) } from the overpayment.
   Using your own words, explain to the Social Security Administration 
-  why you do not think you should have to return the overpayment amount.
+  why you do not think you should have to return the ${ currency(possessed_overpayment_at_notice_amount) }
+  anymore.
 fields:
-  - Why do you think you should not have to return the overpayment amount?: cant_return_explanation
+  - no label: cant_return_explanation
     datatype: area
 ---
 question: |
@@ -289,9 +453,10 @@ fields:
     datatype: area
 ---
 question: |
-  Reasons that you should not pay the full overpayment amount
+  Can you pay back the full amount?
 subquestion: |
-  Check all of the below that apply.
+  Check any of the below that apply, or none of the above if you can pay everything
+  back.
 fields:
   - no label: overpayment_pay_less_reasons
     datatype: checkboxes
@@ -311,6 +476,9 @@ fields:
     datatype: currency
 ---
 question: |
+  
+---
+question: |
   SSI Payments
 fields:
   - Were you receiving SSI payments in the past?: received_ssi
@@ -319,18 +487,34 @@ fields:
     datatype: yesnoradio
 ---
 question: |
-  Explain why the overpayment happened
+  What is the reason for the overpayment?
 subquestion: |
-  Use your own words to explain
+  Look at the letter the Social Security Administration sent you.
+  What reason is the best match for why the Social Security Administration
+  says you were overpaid?
+field: overpayment_reason
+choices:
+  - ${recordee} had too much money in a bank account
+  - ${recordee} worked too many hours
+  - ${recordee} went out of the country for more than 30 days
+  - I don't know
+---
+question: |
+  Why did the overpayment happen?
 fields:
-  - What changed to cause the overpayment?: overpayment_reason
-    choices:
-      - ${recordee} had too much money in a bank account
-      - ${recordee} worked too many hours
-      - ${recordee} went out of the country for more than 30 days
-  - What do you know about how the overpayment happened?: overpayment_explanation
+  - Use your own words to explain how the overpayment happened.: overpayment_explanation
     datatype: area
+---
+question: |
+  Why was the overpayment not your fault?
+subquestion: |
+  Earlier you said that SSA believes the overpayment happened because ${overpayment_reason}.
+  Use your own words to explain why the overpayment wasn't your fault. Answer
+  "I don't know" if that is the best answer.
+fields:
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
+    datatype: area
+  - Why is it not your fault that you accepted the overpayment?: overpayment_why_accepted
     datatype: area
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
@@ -338,21 +522,17 @@ fields:
 question: |
   Contact with Social Security Administration
 subquestion: |
-  You said that the reason for the overpayment was ${overpayment_reason}
+  You said that the reason for the overpayment was "${overpayment_reason}"
 fields:
-  - Did you tell the Social Security Administration about ${overpayment_reason}?: informed_ssa
+  - Did you tell the Social Security Administration that ${overpayment_reason}?: informed_ssa
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
     datatype: area
     show if:
       variable: informed_ssa
       is: False
-  - Did you speak to someone (by phone or in person) about ${overpayment_reason}?: informed_orally
+  - Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason}?: informed_orally
     datatype: yesnoradio
-  - How, when and where?: how_when_where
-    show if:
-      variable: informed_orally
-      is: False
   - Who did you talk to?: who_spokewith
     show if: informed_orally
   - What did you say?: informed_what_said 
@@ -360,14 +540,23 @@ fields:
     show if: informed_orally
 ---
 question: |
+  How did you talk to Social Security?
+subquestion: |
+  You said that you told Social Security about the overpayment, but it wasn't by 
+  phone or in person.
+fields:
+  - Explain how, when and where you told Social Security about ${overpayment_reason}.: how_when_where
+    datatype: area
+---
+question: |
   Follow-up
 subquestion: |
   You said that you contacted the Social Security Administration
-  to let them know about ${overpayment_reason}.
+  to let them know that ${overpayment_reason}.
 fields:
   - After you reported that ${overpayment_reason}, did the Social Security Administration change your benefits amount?: benefits_changed_after_contact
     datatype: yesnoradio
-  - Did you contact the Social Security Administration to follow-up?: benefits_did_not_change_followed_up
+  - Did you try to let them know about the overpayment more than once?: benefits_did_not_change_followed_up
     datatype: yesnoradio
     show if:  
       variable: benefits_changed_after_contact
@@ -383,7 +572,7 @@ fields:
     show if:
       variable: first_overpayment
       is: False
-  - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it.: past_overpayment_similar_explanation
+  - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it happening again.: past_overpayment_similar_explanation
     datatype: area
     show if:
       variable: first_overpayment
@@ -413,9 +602,9 @@ fields:
     required: False
 ---
 code: |
-  cash_assets = [asset for asset in assets if asset.type in ['savings','checking']]
-  non_cash_assets = [asset for asset in assets if asset.type not in ['savings','checking']]
-  fixed_assets = vehicles + real_estate
+  cash_assets = [asset for asset in assets.elements if asset.type in ['savings','checking']]
+  non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
+  fixed_assets = vehicles.elements + real_estate.elements
 ---
 question: |
   Are any funds being saved for a special purpose?
@@ -581,15 +770,15 @@ attachment:
       - "requestor_3_ssn": ${overpaid_persons.item(2).ssn}
       - "requestor_4": ${overpaid_persons.item(3)}
       - "requestor_4_ssn": ${overpaid_persons.item(3).ssn}
-      - "overpayment_not_my_fault": ${yesno(overpayment_not_my_fault)}
+      - "overpayment_not_my_fault": ${yesno(overpayment_pay_less_reasons.any_true())}
       - "overpayment_cant_afford_full_benefit": ${yesno(overpayment_cant_afford)}
-      - "overpayment_affordable_amount": ${affordable_amount}
+      - "overpayment_affordable_amount": ${currency(affordable_amount)}
       - "overpayment_dont_receive_ssi": ${yesno(received_ssi)}
       - "overpayment_dont_receive_ssi_affordable_amount": ${affordable_amount}
       - "overpayment_receive_ssi": ${yesno(receives_ssi)}
       - "overpayment_receive_ssi_affordable_amount": ${affordable_amount}
-      - "rep_received_benefits_no": ${noyes(overpayment_is_rep_payee)}
-      - "rep_received_benefits_yes": ${yesno(overpayment_is_rep_payee)}
+      - "rep_received_benefits_no": ${noyes(client_is_rep_payee)}
+      - "rep_received_benefits_yes": ${yesno(client_is_rep_payee)}
       - "beneficiary_name": ${beneficiary.name.full() + ' ' + beneficiary.address.block() }
       - "benefits_used_for": ${ overpayment_benefits_used_for}
       - "someone_else_lived_with_user_yes": No 
@@ -601,20 +790,20 @@ attachment:
       - "told_ssa_yes": ${yesno(informed_ssa)}
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tel_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
-      - "told_ssa_how": ${ informed_what_said if informed_ssa else '' }
+      - "told_ssa_how": ${ informed_what_said if informed_ssa and informed_orally else '' }
       - "contacted_ssa_again_yes": No
       - "contacted_ssa_again_no": No
       - "overpaid_before_yes": ${noyes(first_overpayment)}
       - "overpaid_before_no": ${yesno(first_overpayment)}
       - "overpaid_before_ssn": something
-      - "overpaid_before_steps_to_prevent": ${ past_overpayment_explanation}
-      - "possess_money_yes": No
-      - "possess_money_amount": something
-      - "possess_money_no": No
-      - "possessed_money_yes": No
-      - "possessed_money_amount": something
-      - "possessed_money_no": No
-      - "why_can_keep": something
+      - "overpaid_before_steps_to_prevent": ${ past_overpayment_explanation if not first_overpayment else ''}
+      - "possess_money_yes": ${yesno(possess_overpayment)}
+      - "possess_money_amount": ${currency(possess_overpayment_amount)}
+      - "possess_money_no": ${noyes(possess_overpayment)}
+      - "possessed_money_yes": ${yesno(possessed_overpayment_at_notice)}
+      - "possessed_money_amount": ${currency(possessed_overpayment_at_notice_amount) if possessed_overpayment_at_notice else ''}
+      - "possessed_money_no": ${noyes(possessed_overpayment_at_notice)}
+      - "why_can_keep": ${cant_return_explanation if not possess_overpayment and possessed_overpayment_at_notice else ""}
       - "gave_away_yes": No
       - "gave_away_no": No
       - "gave_away_details": No
@@ -804,7 +993,7 @@ attachment:
       - "expense_other":  ${expenses.total(type='other',period_to_use=12)}
       - "adjusted_expenses": something
       - "adjusted_monthly_expenses": something
-      - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation}
+      - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation if expenses_exceed_income else ''}
       - "financial_situation_will_change_yes": ${yesno(expect_change)}
       - "financial_situation_will_change_no": ${noyes(expect_change)}
       - "cash_special_purpose_no_amount_on_hand": No
@@ -813,10 +1002,10 @@ attachment:
       - "special_purpose_explanation": special purpose?
       - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted)}
       - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted)}
-      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation}
+      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if assets_cannot_be_converted else ''}
       - "cant_convert_property_yes": ${yesno(assets_cannot_be_sold)}
       - "cant_convert_property_no": ${noyes(assets_cannot_be_sold)}
-      - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation}
+      - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation if assets_cannot_be_sold else ''}
       - "remarks_continued": something
       - "remarks_continued_more": something
       - "signature_date": ${today()}
