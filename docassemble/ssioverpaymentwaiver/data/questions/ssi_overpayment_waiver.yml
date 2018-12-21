@@ -106,16 +106,17 @@ code: |
     need_financials_explanation
     financial_statement_questions
 
-    accounts_special_purpose
-    assets_cannot_be_converted
-    assets_cannot_be_sold
+    #accounts_special_purpose
+    #assets_cannot_be_converted
+    #assets_cannot_be_sold
     
   nav.set_section('Finishing up')
   client.address.address
   
   signature_choice
   
-  download_form
+  #download_form
+  financial_statement_download_screen
 ---
 code: |
   if recordee.name.full() == client.name.full() and payment_type == 'SSI':
@@ -602,8 +603,12 @@ fields:
     required: False
 ---
 code: |
-  cash_assets = [asset for asset in assets.elements if asset.type in ['savings','checking']]
-  non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
+  if assets.there_are_any:
+    cash_assets = [asset for asset in assets.elements if asset.type in ['savings','checking']]
+    non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
+  else:
+    cash_assets = []
+    non_cash_assets = []
   fixed_assets = vehicles.elements + real_estate.elements
 ---
 question: |
