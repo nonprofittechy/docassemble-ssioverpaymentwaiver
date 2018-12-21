@@ -27,6 +27,7 @@ sections:
   - Finishing up
 ---
 mandatory: True
+scan for variables: False
 code: |
   nav.set_section('Getting started')
   intro_screen
