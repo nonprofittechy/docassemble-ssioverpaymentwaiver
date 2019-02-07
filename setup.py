@@ -45,9 +45,9 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.ssioverpaymentwaiver',
-      version='0.0.11',
+      version='0.0.13',
       description=('Request for Waiver of SSI Overpayment'),
-      long_description='# SSI Overpayment waiver\r\n\r\nAn interview to help an individual appeal an overpayment set by the Social\r\nSecurity Administration.\r\n\r\n# Changelog\r\n\r\n* 2018-12-01 Improved financial statement (in progress) and logical questions for overpayment\r\n* Initial version - handles basic financial statement',
+      long_description='# SSI Overpayment waiver\r\n\r\nAn interview to help an individual appeal an overpayment set by the Social\r\nSecurity Administration.\r\n\r\n# Changelog\r\n\r\n* 2019-02-06 Preliminary mapping of all PDF fields\r\n* 2019-01-25 Bring to current\r\n* 2018-12-01 Improved financial statement (in progress) and logical questions for overpayment\r\n* Initial version - handles basic financial statement',
       long_description_content_type='text/markdown',
       author='Quinten Steenhuis',
       author_email='qsteenhuis@gmail.com',

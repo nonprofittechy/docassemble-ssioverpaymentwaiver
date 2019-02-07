@@ -263,6 +263,8 @@ question: |
   Household expenses
 subquestion: |
   ${ expenses.table }
+  Total monthly expenses: ${currency(expenses.total(period_to_use=12))}
+  
   ${ expenses.add_action() }
 field: review_expenses
 ---
@@ -396,6 +398,7 @@ fields:
   - Hourly rate: x.jobs[i].hourly_rate
     datatype: currency
     show if: x.jobs[i].is_hourly
+    hint: $/hour
   - Average number of hours worked each pay check: x.jobs[i].hours_per_period
     datatype: integer
     show if: x.jobs[i].is_hourly        
@@ -512,8 +515,12 @@ fields:
     choices: everyone
   - Balance : assets[i].balance
     datatype: currency
-  - Interest or other Income: assets[i].value
+  - Interest or other income: assets[i].value
     datatype: currency
+  - Why don't you have any income from this asset?: assets[i].no_income_explanation
+    show if:
+      variable: assets[i].value
+      is: 0
   - Income is received: assets[i].period
     required: False
     code: |
@@ -534,6 +541,10 @@ fields:
       asset_type_list()
     exclude: |
       ['real estate','vehicle']      
+  - Explain what type of asset this is: assets[i].other_type
+    show if:
+      variable: assets[i].type
+      is: 'other'     
   - Owner(s): assets[i].owner
     datatype: object_checkboxes
     none of the above: False
@@ -542,6 +553,10 @@ fields:
     datatype: currency
   - Interest or other Income: assets[i].value
     datatype: currency
+  - Why don't you have any income from this asset?: assets[i].no_income_explanation
+    show if:
+      variable: assets[i].value
+      is: 0
   - Income is received: assets[i].period
     code: |
       period_list()
@@ -643,8 +658,8 @@ rows: x.incomes
 columns:
   - Type: |
       income_type_list()[row_item.type] if defined('row_item.type') else ''
-  - Amount: |
-      currency(row_item.amount())
+  - Monthly Income: |
+      currency(row_item.amount(period_to_use=12))
 edit:
   - period
 ---
@@ -654,8 +669,8 @@ rows: x.incomes
 columns:
   - Type: |
       income_type_list()[row_item.type] if defined('row_item.type') else ''
-  - Amount: |
-      currency(row_item.amount())
+  - Monthly Income: |
+      currency(row_item.amount(period_to_use=12))
 ---
 table: household.incomes.table
 rows: household.incomes
@@ -664,8 +679,8 @@ columns:
       row_item.recipient
   - Type: |
       income_type_list()[row_item.type] if defined('row_item.type') else ''      
-  - Amount: |
-      currency(row_item.amount())
+  - Monthly Income: |
+      currency(row_item.amount(period_to_use=12))
 edit:
   - period
 ---
@@ -676,8 +691,8 @@ columns:
       row_item.recipient
   - Type: |
       income_type_list()[row_item.type] if defined('row_item.type') else ''      
-  - Amount: |
-      currency(row_item.amount())
+  - Monthly Income: |
+      currency(row_item.amount(period_to_use=12))
 ---
 generic object: Individual
 table: x.jobs.table
