@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 from fnmatch import fnmatchcase
 from distutils.util import convert_path
 
-standard_exclude = ('*.py', '*.pyc', '*~', '.*', '*.bak', '*.swp*')
+standard_exclude = ('*.pyc', '*~', '.*', '*.bak', '*.swp*')
 standard_exclude_directories = ('.*', 'CVS', '_darcs', './build', './dist', 'EGG-INFO', '*.egg-info')
 def find_package_data(where='.', package='', exclude=standard_exclude, exclude_directories=standard_exclude_directories):
     out = {}
@@ -45,7 +45,7 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
 setup(name='docassemble.ssioverpaymentwaiver',
       version='0.0.13',
       description=('Request for Waiver of SSI Overpayment'),
-      long_description=u'# SSI Overpayment waiver\r\n\r\nAn interview to help an individual appeal an overpayment set by the Social\r\nSecurity Administration.\r\n\r\n# Changelog\r\n\r\n* 2019-02-06 Preliminary mapping of all PDF fields\r\n* 2019-01-25 Bring to current\r\n* 2018-12-01 Improved financial statement (in progress) and logical questions for overpayment\r\n* Initial version - handles basic financial statement',
+      long_description='# SSI Overpayment waiver\r\n\r\nAn interview to help an individual appeal an overpayment set by the Social\r\nSecurity Administration.\r\n\r\n# Changelog\r\n\r\n* 2019-02-06 Preliminary mapping of all PDF fields\r\n* 2019-01-25 Bring to current\r\n* 2018-12-01 Improved financial statement (in progress) and logical questions for overpayment\r\n* Initial version - handles basic financial statement',
       long_description_content_type='text/markdown',
       author='Quinten Steenhuis',
       author_email='qsteenhuis@gmail.com',
@@ -53,7 +53,7 @@ setup(name='docassemble.ssioverpaymentwaiver',
       url='https://docassemble.org',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=['docassemble.income'],
+      install_requires=['docassemble.income', 'docassemble.ssa'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/ssioverpaymentwaiver/', package='docassemble.ssioverpaymentwaiver'),
      )

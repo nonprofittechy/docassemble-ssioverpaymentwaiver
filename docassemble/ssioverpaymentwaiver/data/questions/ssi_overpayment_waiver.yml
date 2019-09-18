@@ -26,6 +26,7 @@ sections:
   - Financial information
   - Finishing up
 ---
+id: interview order
 mandatory: True
 scan for variables: False
 code: |
@@ -136,6 +137,7 @@ code: |
     we_think_recordee_is_client = False
   evaluate_if_receives_benefits = True
 ---
+id: intro
 question: |
   Social Security Overpayment Waiver or Change
 subquestion: |
@@ -163,6 +165,7 @@ help: |
   secure and not to lose it, because we will not be able
   to retrieve your interview without it.
 ---
+id: who is overpaid
 question: |
   Who got too much money from Social Security?
 subquestion:
@@ -194,6 +197,7 @@ code: |
   else:
     expenses_exceed_income = False  
 ---
+id: agree overpaid
 question: |
   Do you agree that ${recordee} got too much money from Social Security?
 subquestion: |
@@ -205,6 +209,7 @@ choices:
   - I disagree that ${overpayment_reason}. I think ${recordee} was paid the right amount: False
   - I agree ${recordee} was paid too much, even if it was an accident.: True
 ---
+id: exit dont agree overpaid
 decoration: hand-paper
 question: |
   This may not be the right form for you.
@@ -220,6 +225,7 @@ buttons:
   - Restart: restart
   - Exit: exit
 ---
+id: is rep payee
 question: |
   Are you ${recordee}'s representative payee?
 subquestion: |
@@ -229,6 +235,7 @@ subquestion: |
   representative payee for ${recordee}?
 yesno: client_is_rep_payee
 ---
+id: overpayment info
 question: |
   Tell us about ${recordee}'s overpayment
 fields:
@@ -237,12 +244,14 @@ fields:
   - Did you receive any of the overpaid money?:   someone_else_user_received_benefits
     datatype: yesnoradio
 ---
+id: how benefits used
 question: |
   How were the overpaid benefits used?
 fields:
   - no label: overpayment_benefits_used_for
     datatype: area
 ---
+id: beneficiary info
 question: |
   Who is the beneficiary?
 subquestion: |
@@ -269,6 +278,7 @@ fields:
   - County: beneficiary.address.county
     required: False      
 ---
+id: additional users
 question: |
   Is anyone else using this form with you?
 subquestion: |
@@ -282,6 +292,7 @@ subquestion: |
   Social Security Administration to waive the overpayment?
 yesno: overpaid_persons.there_are_any
 ---
+id: additional user info
 question: |
   Who is the ${ordinal(i)} person who will use the form with you?
 fields:
@@ -298,6 +309,7 @@ fields:
     validate: is_valid_ssn
 
 ---
+id: social security number
 generic object: Individual
 question: |
   Social Security Number for ${x}
@@ -313,6 +325,7 @@ terms:
       The Social Security Administration needs this number in order to 
       apply this overpayment waiver request to the right account.
 ---
+id: review overpaid persons 
 question: |
   Overpaid Persons
 subquestion: |
@@ -334,12 +347,14 @@ edit:
   - row_item.name.first
   - row_item.ssn
 ---
+id: overpaid person info
 question: |
   Who is the ${ordinal(i)} overpaid person?  
 fields:
   - Social Security Number: overpaid_persons[i].ssn
     validate: is_valid_ssn
 ---
+id: have overpaid money
 question: |
   What happened to the overpaid checks or money?
 fields:
@@ -350,6 +365,7 @@ fields:
     datatype: currency
     step: 1
 ---
+id: pay ssa explanation
 question: |
   You will need to pay the Social Security Administration back
 subquestion: |
@@ -359,6 +375,7 @@ subquestion: |
   payment plan that works for you.
 field: pay_ssa_explanation
 ---
+id: had overpaid money
 question: |
   What happened to the overpaid checks or money?
 subquestion: |
@@ -372,6 +389,7 @@ fields:
     show if: possessed_overpayment_at_notice
     
 ---
+id: receives benefits
 question: |
   Are you currently receiving any needs-based cash benefits?
 subquestion: |
@@ -382,6 +400,7 @@ help: |
   If you are receiving SSI or another benefit based on your need, you do not need
   to give the Social Security Administration as much information about your finances.
 ---
+id: benefits kind
 question: |
   What kind of cash benefits are you receiving?
 fields: 
@@ -403,6 +422,7 @@ code: |
   else:
     receives_benefits_type = receives_benefits_other
 ---
+id: dont need financial statement explanation
 question: |
   You don't need to give us your financial information
 subquestion: |
@@ -411,6 +431,7 @@ subquestion: |
   and signature on the next few pages.
 field: dont_need_financials_explanation
 ---
+id: do need financial statement explanation
 question: |
   We will need to collect your financial information
 subquestion: |
@@ -424,12 +445,14 @@ subquestion: |
   self-employment income, bank statements, and any monthly bills you pay.
 field: need_financials_explanation  
 ---
+id: cash on hand
 question: |
   Cash on hand
 fields:
   - How much money do you, your spouse, or anybody who depends on you have available as cash on hand?: cash_amount
     datatype: currency   
 ---
+id: ssa payment type
 question: |
   What kind of Social Security payments does ${recordee} receive?
 field: payment_type
@@ -439,6 +462,7 @@ choices:
   - Retirement benefits: other
   - ${recordee} no longer receives any money from Social Security: none
 ---
+id: actions after overpayment notice
 question: |
   What happened after you got the overpayment notice from Social Security?
 subquestion: |
@@ -456,6 +480,7 @@ fields:
     datatype: area
     show if: received_cash_after_notice
 ---
+id: why cant return overpayment
 question: |
   Why can't you return the overpayment any more?
 subquestion: |
@@ -468,6 +493,7 @@ fields:
   - no label: cant_return_explanation
     datatype: area
 ---
+id: expenses higher than income
 question: |
   Your expenses are higher than your income
 subquestion: |
@@ -478,6 +504,7 @@ fields:
   - no label: expenses_exceed_income_explanation
     datatype: area
 ---
+id: ability to pay
 question: |
   Can you pay back the full amount?
 subquestion: |
@@ -495,15 +522,14 @@ code: |
   overpayment_not_my_fault = overpayment_pay_less_reasons['The overpayment was not my fault']
   overpayment_cant_afford = overpayment_pay_less_reasons['The overpayment was not my fault']
 ---
+id: amount can pay
 question: |
   How much can you afford to pay back each month?
 fields:
   - no label: affordable_amount
     datatype: currency
 ---
-question: |
-  
----
+id: ssi payment status
 question: |
   SSI Payments
 fields:
@@ -512,6 +538,7 @@ fields:
   - Are you receiving SSI payments right now?: receives_ssi
     datatype: yesnoradio
 ---
+id: overpayment reason
 question: |
   What is the reason for the overpayment?
 subquestion: |
@@ -526,12 +553,14 @@ choices:
   - Something else
   - I don't know
 ---
+id: overpayment explanation
 question: |
   Why did the overpayment happen?
 fields:
   - Use your own words to explain how the overpayment happened.: overpayment_explanation
     datatype: area
 ---
+id: overpayment fault
 question: |
   Why was the overpayment not your fault?
 subquestion: |
@@ -546,6 +575,7 @@ fields:
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
 ---
+id: ssa contact
 question: |
   Contact with Social Security Administration
 subquestion: |
@@ -566,6 +596,7 @@ fields:
     datatype: area
     show if: informed_orally
 ---
+id: ssa contact how
 question: |
   How did you talk to Social Security?
 subquestion: |
@@ -575,6 +606,7 @@ fields:
   - Explain how, when and where you told Social Security about ${overpayment_reason}.: how_when_where
     datatype: area
 ---
+id: ssa contact followup
 question: |
   Follow-up
 subquestion: |
@@ -590,6 +622,7 @@ fields:
       variable: benefits_changed_after_contact
       is: False
 ---
+id: past overpayments
 question: |
   Past overpayments
 fields:
@@ -612,6 +645,7 @@ fields:
       is: False
       
 ---
+id: expected financial changes
 comment: |
   Financial expectation and funds availability
 question: |
@@ -636,13 +670,15 @@ fields:
 ---
 code: |
   if assets.there_are_any:
-    cash_assets = [asset for asset in assets.elements if asset.type in ['savings','checking']]
-    non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
+    #cash_assets = [asset for asset in assets if asset.type in ['savings','checking']]
+    cash_assets = []
+    #non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
   else:
     cash_assets = []
     non_cash_assets = []
   fixed_assets = vehicles.elements + real_estate.elements
 ---
+id: funds being saved
 question: |
   Are any funds being saved for a special purpose?
 subquestion: |
@@ -654,12 +690,13 @@ fields:
   - no label: accounts_special_purpose
     datatype: object_checkboxes
     choices: cash_assets
-    object labeler: |
-      lambda y: y.type + ": "  + currency(y.balance)
+    #object labeler: |
+    #  lambda y: y.type + ':' +' '  + currency(y.balance)
   - Explain what the special purpose is: accounts_special_purpose_explanation
     datatype: area        
     required: False
 ---
+id: convertable noncash assets
 question: |
   Are there any assets with a balance or value that CANNOT be converted to cash?
 subquestion: |
@@ -672,11 +709,12 @@ fields:
     datatype: object_checkboxes
     choices: non_cash_assets
     object labeler: |
-      lambda y: y.type + ": "  + currency(y.balance)
+      lambda y: y.type + ':' + ' ' + currency(y.balance)
   - Explain why the assets CANNOT be converted to cash: assets_cannot_be_converted_explanation
     datatype: area
     required: False
 ---
+id: convertable cash assets
 question: |
   Are there any assets that do not have a balance or value that CANNOT be sold or
   otherwise converted to cash?
@@ -696,6 +734,7 @@ fields:
     datatype: area
     required: False
 ---
+id: contact information
 generic object: Individual
 question: |
   ${x}'s Contact Information
@@ -715,6 +754,7 @@ fields:
   - County: x.address.county
     required: False
 ---
+id: signature method
 question: |
   Signature
 subquestion: |
@@ -759,6 +799,7 @@ help: |
   If your phone does not do this, use the text option instead.
   
 ---
+id: sign on phone
 question: Sign on your phone
 subquestion: |
   % if device().is_pc:
@@ -769,6 +810,7 @@ subquestion: |
   
 field: signature_wait_screen  
 ---
+id: signature
 question: Sign below
 subquestion: |
 signature: client.signature
@@ -819,6 +861,7 @@ code: |
     cash_special_purpose_no_money_on_hand = True
      
 ---
+id: download pdf
 question: Here is your document.
 event: download_pdf
 attachment:
