@@ -7,6 +7,9 @@ features:
   question help button: True
   default icons: material icons
   navigation: True
+  javascript: 
+    - ssa.js
+    - phone.js
 ---
 objects:
   - recordee: Individual
@@ -14,10 +17,12 @@ objects:
   - beneficiary: Individual
 ---
 modules:
-  - .ssa
+  - docassemble.ssa.ssa
 ---
 include:
   - financial_statement.yml
+  - docassemble.gbls:basic-questions-gbls.yml
+  - docassemble.ssa:ssa.yml
 ---
 sections:
   - Getting started
@@ -185,6 +190,7 @@ fields:
     required: False
   - Last name: recordee.name.last
   - Social Security Number: recordee.ssn
+    datatype: ssn
     validate: is_valid_ssn
 ---
 code: |
@@ -307,6 +313,7 @@ fields:
   - Last name: overpaid_persons[i].name.last
   - Social Security Number: overpaid_persons[i].ssn
     validate: is_valid_ssn
+    datatype: ssn
 
 ---
 id: social security number
@@ -317,7 +324,8 @@ subquestion: |
   What is ${x}'s Social Security Number?
 fields:
   - SSN: x.ssn
-    validate: is_valid_ssn  
+    validate: is_valid_ssn
+    datatype: ssn  
 under: |
   {Why} do we need this?
 terms:
@@ -353,6 +361,7 @@ question: |
 fields:
   - Social Security Number: overpaid_persons[i].ssn
     validate: is_valid_ssn
+    datatype: ssn
 ---
 id: have overpaid money
 question: |
@@ -630,6 +639,7 @@ fields:
     datatype: yesnoradio
   - What Social Security Number were you overpaid on before?: past_overpayment_ssn
     validate: is_valid_ssn
+    datatype: ssn
     show if:
       variable: first_overpayment
       is: False
@@ -670,9 +680,9 @@ fields:
 ---
 code: |
   if assets.there_are_any:
-    #cash_assets = [asset for asset in assets if asset.type in ['savings','checking']]
-    cash_assets = []
-    #non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
+    cash_assets = [asset for asset in assets if asset.type in ['savings','checking']]
+    #cash_assets = []
+    non_cash_assets = [asset for asset in assets.elements if asset.type not in ['savings','checking']]
   else:
     cash_assets = []
     non_cash_assets = []
@@ -818,17 +828,18 @@ under: |
   ${ client }
 ---
 code: |
-  client_support = client.incomes.total(type='other') > 0
-  spouse_support = spouse.incomes.total(type='other') > 0
-  household_support = household.incomes.total(type='other') > 0
+  client_support = client.incomes.total(type='other') > 0 if not isinstance(client.incomes, DAEmpty) else []
+  spouse_support = spouse.incomes.total(type='other') > 0 if not isinstance(spouse.incomes, DAEmpty) else []
+  household_support = household.incomes.total(type='other') > 0 if not isinstance(household.incomes, DAEmpty) else []
     
   receives_support = client_support or spouse_support or household_support
+  all_incomes = client.incomes + spouse.incomes + household.incomes
   
   if receives_support:
-    all_incomes = client.incomes + spouse.incomes + household.incomes
     support_sources = [income.name for income in all_incomes if income.type == 'other support']
   else:
     support_sources = []
+    
 ---
 code: |
   client_pensions = client.incomes.matches('pension')
@@ -859,7 +870,15 @@ code: |
   else:
     cash_kept_special_purpose = False
     cash_special_purpose_no_money_on_hand = True
-     
+---
+code: |
+  room_and_board_explanation = comma_and_list([item.room_and_board_explanation for item in all_incomes if item.type == "room and board"])     
+---
+code: |
+  asset_other_description = comma_and_list([item.other_type for item in assets if item.type == "other"])
+---
+code: |
+  expense_support_details = comma_and_list([item.support_explanation for item in expenses if item.type == "support"])
 ---
 id: download pdf
 question: Here is your document.
@@ -873,21 +892,21 @@ attachment:
       - "record_owner": ${recordee}
       - "record_ssn": ${recordee.ssn}
       - "requestor_1": |
-          ${overpaid_persons.item(0)}, ${overpaid_persons.item(0).ssn}
+          ${overpaid_persons.item(0)} ${overpaid_persons.item(0).ssn}
       - "requestor_2": |
-          ${overpaid_persons.item(1)}, ${overpaid_persons.item(1).ssn}
+          ${overpaid_persons.item(1)} ${overpaid_persons.item(1).ssn}
       - "requestor_3": |
-          ${overpaid_persons.item(2)}, ${overpaid_persons.item(2).ssn}
+          ${overpaid_persons.item(2)} ${overpaid_persons.item(2).ssn}
       - "requestor_4": |
-          ${overpaid_persons.item(3)}, ${overpaid_persons.item(3).ssn}
+          ${overpaid_persons.item(3)} ${overpaid_persons.item(3).ssn}
       - "requestor_5": |
-          ${overpaid_persons.item(4)}, ${overpaid_persons.item(4).ssn }     
+          ${overpaid_persons.item(4)} ${overpaid_persons.item(4).ssn }     
       - "requestor_6": |
-          ${overpaid_persons.item(5)}, ${overpaid_persons.item(5).ssn}
+          ${overpaid_persons.item(5)} ${overpaid_persons.item(5).ssn}
       - "requestor_7": |
-          ${overpaid_persons.item(6)}, ${overpaid_persons.item(6).ssn}
+          ${overpaid_persons.item(6)} ${overpaid_persons.item(6).ssn}
       - "requestor_8": |
-          ${overpaid_persons.item(7)}, overpaid_persons.item(7).ssn      
+          ${overpaid_persons.item(7)} ${overpaid_persons.item(7).ssn}      
       - "overpayment_not_my_fault": ${yesno(overpayment_pay_less_reasons.any_true())}
       - "overpayment_cant_afford_full_benefit": ${yesno(overpayment_cant_afford)}
       - "overpayment_affordable_amount": ${currency(affordable_amount) if not payment_type == 'none' else ''}
@@ -981,7 +1000,7 @@ attachment:
       - "asset_other_amount": ${currency(assets.balance_total(type='other'))}
       - "asset_other_monthly": ${currency(assets.total(type='other',period_to_use=12))}
       - "asset_other_explanation": ${assets.matches('other').item(0).no_income_explanation if assets.matches('other').item(0).value == 0 else ''}
-      - "asset_other_description": something
+      - "asset_other_description": ${asset_other_description}
       - "countable_asset_total_amount": ${currency(assets.balance_total())}
       - "countable_asset_total_monthly": ${currency(assets.total(period_to_use=12))}
       - "vehicle_owner_1": ${vehicles.item(0).owner}
@@ -1085,8 +1104,8 @@ attachment:
       - "spouse_income_total": ${currency(spouse.incomes.total(period_to_use=12) + assets.total(owner=spouse,period_to_use=12) + spouse.jobs.total(period_to_use=12))}
       - "dependent_income_total": ${currency(household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12))}
       - "grand_total": ${currency(grand_total)}
-      - "remarks": something
-      - "other_explanation": something
+      - "remarks": ${room_and_board_explanation}
+      #- "other_explanation": something # not used
       - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12))}
       - "expense_food": ${currency(expenses.total(type='food',period_to_use=12))}
       - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12))}
@@ -1106,9 +1125,10 @@ attachment:
       - "expense_loan_1": ${currency(expenses.matches('loan').item(0).amount(period_to_use=12))}
       - "expense_loan_2": ${currency(expenses.matches('loan').item(1).amount(period_to_use=12))}
       - "expense_support_1": ${currency(expenses.matches('support').item(0).amount(period_to_use=12))}
-      - "expense_support_details": something
+      - "expense_support_details": ${expense_support_details}
       - "expense_support_2": ${currency(expenses.matches('support').item(1).amount(period_to_use=12))}
-      - "expense_other_details": something
+      - "expenses_total": ${currency(expenses.total(period_to_use=12))}
+      - "expense_other_details": ${expense_other_details}
       - "expense_other":  ${currency(expenses.total(type='other',period_to_use=12))}
       - "monthly_income": ${currency(grand_total)} 
       - "monthly_expenses": ${currency(monthly_expenses)}
@@ -1126,8 +1146,8 @@ attachment:
       - "cant_convert_property_yes": ${yesno(assets_cannot_be_sold)}
       - "cant_convert_property_no": ${noyes(assets_cannot_be_sold)}
       - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation if assets_cannot_be_sold else ''}
-      - "remarks_continued": something
-      - "remarks_continued_more": something
+      #- "remarks_continued": something # TODO ? maybe not needed
+      #- "remarks_continued_more": something # TODO?
       - "signature": ${client.signature if defined('client.signature') else ''}
       - "signature_date": ${today()}
       - "phone_work": ${client.phone_work}
