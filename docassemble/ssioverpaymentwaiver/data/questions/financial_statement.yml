@@ -87,6 +87,7 @@ code: |
   add_expenses
   expenses.gathered=True
   review_expenses
+  expense_other_details
   
   if vehicles.there_are_any:
     review_vehicles
@@ -488,6 +489,11 @@ fields:
     show if:
       code: |
         x.incomes[i].type ==  "public assistance"
+  - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
+    datatype: area
+    show if:
+      code: |
+        x.incomes[i].type == "room and board"        
   - Source of the other support: x.incomes[i].name
     show if:
       code: |
@@ -518,6 +524,11 @@ fields:
     show if:
       variable: x.incomes[i].type
       is: "public assistance"
+  - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
+    datatype: area
+    show if:
+      variable: x.incomes[i].type
+      is: "room and board"
   - Source of the other support: x.incomes[i].name
     show if:
       variable: x.incomes[i].type
@@ -551,11 +562,16 @@ fields:
   - Why don't you have any income from this asset?: assets[i].no_income_explanation
     show if:
       variable: assets[i].value
-      is: 0
+      is: 0      
   - Income is received: assets[i].period
     required: False
     code: |
       period_list()
+  - Explain what kind of asset this is: assets[i].other_type
+    datatype: area
+    show if:
+      code: |
+        assets[i].type == "other"
 ---
 id: asset information
 if: |
@@ -669,6 +685,11 @@ fields:
     default: 12
     code: |
       period_list()
+  - Who are you paying support for, and why?: expenses[i].support_explanation
+    datatype: area
+    show if:
+      code: |
+        expenses[i].type == "support"      
 ---
 id: expense information
 if: |
@@ -687,6 +708,18 @@ fields:
     default: 12
     code: |
       period_list()
+  - Who are you paying support for, and why?: expenses[i].support_explanation
+    datatype: area
+    show if:
+      variable: expenses[i].type
+      is: "support"      
+---
+question: |
+  Explain any unusual or very large expenses (optional)
+fields:
+  - Write down any explanation you want to give about a large or unusual expense: expense_other_details
+    datatype: area
+    required: False  
 ---
 generic object: Individual
 table: x.incomes.table
