@@ -2,6 +2,7 @@
 metadata:
   title: SSI Overpayment Waiver Request
   short title: Overpayment Waiver
+  revision_date: 2019-09-29
 ---
 features:
   question help button: True
@@ -94,6 +95,7 @@ code: |
   evaluate_if_receives_benefits # We may already know--use code to set if true
   received_ssi
   if receives_benefits:
+    receives_benefits_type
     cash_amount = DAEmpty()
     vehicles = DAEmpty()
     household.jobs = DAEmpty()
@@ -108,17 +110,21 @@ code: |
     assets_cannot_be_sold = DAEmpty()
     assets_cannot_be_converted = DAEmpty()
     accounts_special_purpose = DAEmpty()
-    receives_benefits_type
     dont_need_financials_explanation
+    expenses_exceed_income = DAEmpty()
+    expense_other_details = DAEmpty()
   else:
     need_financials_explanation
     cash_amount
     financial_statement_questions
     if assets.there_are_any:
       accounts_special_purpose
-    if assets.there_are_any or vehicles.there_are_any or real_estate.there_are_any:      
+    if non_cash_assets:
       assets_cannot_be_converted
+    if vehicles.there_are_any or real_estate.there_are_any:
       assets_cannot_be_sold
+    if expenses_exceed_income:
+      expenses_exceed_income_explanation
     
   nav.set_section('Finishing up')
   client.address.address
@@ -129,6 +135,9 @@ code: |
     
   download_pdf
   #financial_statement_download_screen
+---
+code: |
+  has_sellable_assets =   vehicles.there_are_any or real_estate.there_are_any
 ---
 code: |
   if recordee.name.full() == client.name.full() and payment_type == 'SSI':
@@ -909,7 +918,7 @@ attachment:
           ${overpaid_persons.item(7)} ${overpaid_persons.item(7).ssn}      
       - "overpayment_not_my_fault": ${yesno(overpayment_pay_less_reasons.any_true())}
       - "overpayment_cant_afford_full_benefit": ${yesno(overpayment_cant_afford)}
-      - "overpayment_affordable_amount": ${currency(affordable_amount) if not payment_type == 'none' else ''}
+      - "overpayment_affordable_amount": ${currency(affordable_amount) if overpayment_cant_afford and not payment_type == 'none' else ''}
       - "overpayment_dont_receive_ssi": ${yesno(received_ssi)}
       - "overpayment_dont_receive_ssi_affordable_amount": ${currency(affordable_amount) if received_ssi else ''}
       - "overpayment_receive_ssi": ${yesno(receives_ssi)}
@@ -950,7 +959,7 @@ attachment:
       - "receiving_benefits_yes": ${yesno(receives_ssi)}
       - "receiving_benefits_no": ${noyes( receives_ssi)}
       - "receiving_benefits_name": ${receives_benefits_type if receives_benefits  else ''}
-      - "receiving_benefits_claim_number": ${receives_benefits_claim_number if receives_benefits else ''}
+      - "receiving_benefits_claim_number": ${receives_benefits_claim_number if receives_benefits and not receives_ssi else ''}
       - "dependent_1": ${household.item(0)}
       - "dependent_1_age": ${household.item(0).age}
       - "dependent_1_relationship": ${household.item(0).relationship}
@@ -1140,12 +1149,12 @@ attachment:
       - "cash_special_purpose_money_available": ${noyes(cash_kept_special_purpose)}
       - "cash_special_purpose_money_needed": ${yesno(cash_kept_special_purpose)}
       - "special_purpose_explanation": ${accounts_special_purpose_explanation if cash_kept_special_purpose else ''}
-      - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted)}
-      - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted)}
-      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if assets_cannot_be_converted else ''}
-      - "cant_convert_property_yes": ${yesno(assets_cannot_be_sold)}
-      - "cant_convert_property_no": ${noyes(assets_cannot_be_sold)}
-      - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation if assets_cannot_be_sold else ''}
+      - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted) if non_cash_assets else ''}
+      - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted) if non_cash_assets else ''}
+      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if non_cash_assets and assets_cannot_be_converted else ''}
+      - "cant_convert_property_yes": ${yesno(assets_cannot_be_sold) if has_sellable_assets else ''}
+      - "cant_convert_property_no": ${noyes(assets_cannot_be_sold) if has_sellable_assets else ''}
+      - "cant_convert_property_explanation": ${assets_cannot_be_sold_explanation if has_sellable_assets and assets_cannot_be_sold else ''}
       #- "remarks_continued": something # TODO ? maybe not needed
       #- "remarks_continued_more": something # TODO?
       - "signature": ${client.signature if defined('client.signature') else ''}
