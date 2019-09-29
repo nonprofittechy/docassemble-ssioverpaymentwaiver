@@ -820,7 +820,7 @@ columns:
   - Year/Make/Model: |
       row_item.year +' ' +  row_item.make + ' ' + row_item.model
   - Present value: |
-      currency(row_item.market_value)
+      currency(row_item.value)
   - Loan balance: |
       currency(row_item.balance)
   - Purpose: |

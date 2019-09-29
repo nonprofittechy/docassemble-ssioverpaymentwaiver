@@ -5,6 +5,7 @@ Security Administration.
 
 # Changelog
 
+* 2019-09-29 Bug fixes (question order, hide irrelevant questions)
 * 2019-09-21 Bug fixes, finish implementing PDF fields
 * 2019-02-06 Preliminary mapping of all PDF fields
 * 2019-01-25 Bring to current
