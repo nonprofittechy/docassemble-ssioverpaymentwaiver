@@ -19,6 +19,7 @@ objects:
 ---
 modules:
   - docassemble.ssa.ssa
+  - .fix_currency
 ---
 include:
   - financial_statement.yml
