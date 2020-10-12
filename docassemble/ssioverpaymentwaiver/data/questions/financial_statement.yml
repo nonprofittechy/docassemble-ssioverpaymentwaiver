@@ -2,6 +2,7 @@
 modules:
  - docassemble.base.util
  - docassemble.income.income
+ - .custom_income
 ---
 objects:
   - client: Individual
@@ -17,6 +18,7 @@ objects:
   - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
   - vehicles: VehicleList.using(there_is_another=False,complete_attribute='value')
   - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
+  - properties: IncomeList.using(there_is_another=False,complete_attribute='value')
   - expenses: IncomeList.using(there_is_another=False,complete_attribute='type')
 ---
 code: |
@@ -62,6 +64,10 @@ code: |
     client.add_incomes
     client.incomes.gathered = True
     client.review_incomes
+
+  if client.receive_support and client.support_under_loan:
+    client.receive_support_amount
+
   if has_spouse and spouse.jobs.there_are_any:
     #spouse.jobs[0]
     #spouse.jobs.there_is_another
@@ -82,6 +88,9 @@ code: |
     
   if real_estate.there_are_any:
     review_real_estate
+
+  if properties.there_are_any:
+    review_property
 
   expenses_types
   add_expenses
@@ -137,6 +146,26 @@ code: |
     everyone_but_me.append(spouse)
   everyone_but_me.extend(household)
   everyone_but_me.gathered = True
+---
+id: client receives support 
+question: |
+  Do you receive support or contributions from any person or organization?
+fields:
+  - no label: client.receive_support
+    datatype: yesnoradio
+  - Is this support under a loan agreement?: client.support_under_loan
+    datatype: yesnoradio
+    show if:
+      variable: client.receive_support
+      is: True
+---
+id: support loan amount
+question: |
+  How much money do you receive in support each month?
+fields:
+  - no label: client.receive_support_amount
+    datatype: currency
+  - Source: client.receive_support_source
 ---
 id: who lives with client  
 question: |
@@ -278,6 +307,16 @@ subquestion: |
   ${ real_estate.add_action() }
 field: review_real_estate
 ---
+id: real estate review
+question: |
+  Businesses, property, or valuables owned by you or your household members
+subquestion: |
+  So far you've listed ${len(properties)} ${noun_plural('property',len(properties))}.
+  You can add more or click continue to go to the next question.
+  ${ properties.table }
+  ${ properties.add_action() }
+field: review_property
+---
 id: household expenses review
 question: |
   Household expenses
@@ -320,7 +359,7 @@ fields:
   - Money that isn't from a job: x.income_types
     datatype: checkboxes
     code: |
-      non_wage_income_list()  
+      generate_income_list()
 ---
 generic object: Individual
 code: |
@@ -350,6 +389,8 @@ subquestion: |
 fields:
   - Real estate other than the house you live in: real_estate.there_are_any
     datatype: yesno
+  - Interest in business, property, or valuables: properties.there_are_any
+    datatype: yesno
   - Cars, motorcycles, boats or other vehicles other than your family car: vehicles.there_are_any
     help: |
       Answer yes if someone owns a car, motorcyle, boat or any other vehicle
@@ -368,7 +409,7 @@ fields:
   - no label: expenses_types
     datatype: checkboxes
     code: |
-      expense_type_list()
+      expense_types().keys()
 ---
 code: |
   if expenses_types.any_true():
@@ -383,7 +424,7 @@ question: |
 fields:
   - Type of expense: expenses[i].type
     code: |
-      expense_type_list()
+      expense_types()
   - Amount: expenses[i].value
     datatype: currency
   - How often do you pay this amount?: expenses[i].period
@@ -393,9 +434,9 @@ fields:
 ---
 id: expense information prefilled
 question: |
-  How much do you spend on '${(expense_type_list()[expenses[i].type])}'?
+  How much do you spend on '${(expense_types()[expenses[i].type])}'?
 subquestion: |
-  If you have more than one '${(expense_type_list()[expenses[i].type])}'
+  If you have more than one '${(expense_types()[expenses[i].type])}'
   expense in your household, you'll have a chance to add another later on.
 fields:
   - Amount: expenses[i].value
@@ -432,9 +473,6 @@ fields:
     show if: x.jobs[i].is_hourly        
   - Take home pay (net pay) each typical pay check: x.jobs[i].net
     datatype: currency    
-  - Gross pay each typical pay check: x.jobs[i].value
-    datatype: currency
-    hide if: x.jobs[i].is_hourly
   - How often does ${x.name.first} receive a pay check?: x.jobs[i].period
     datatype: integer
     code: |
@@ -475,20 +513,16 @@ comment: |
   income type.
 generic object: Individual
 question: | 
-  ${x}'s ${(income_type_list()[x.incomes[i].type])} income
+  ${x}'s ${(income_types_map()[x.incomes[i].type])} income
 subquestion: |
-  How much does ${x} get from ${(income_type_list()[x.incomes[i].type])}?
-  If ${x} gets money from more than one ${(income_type_list()[x.incomes[i].type])},
+  How much does ${x} get from ${(income_types_map()[x.incomes[i].type])}?
+  If ${x} gets money from more than one ${(income_types_map()[x.incomes[i].type])},
   you will have a chance to add more later.
 fields: 
   - Please describe the kind or name of pension plan: x.incomes[i].name
     show if:
       code: |
         x.incomes[i].type ==  "pension"
-  - Name of the public benefits program: x.incomes[i].name
-    show if:
-      code: |
-        x.incomes[i].type ==  "public assistance"
   - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
     datatype: area
     show if:
@@ -497,14 +531,18 @@ fields:
   - Source of the other support: x.incomes[i].name
     show if:
       code: |
-        x.incomes[i].type ==  "other support"      
+        x.incomes[i].type == "other support"
+  - Please explain the other sources: x.incomes[i].remarks
+    input type: area
+    show if:
+      code: |
+        x.incomes[i].type == "other"
   - Amount: x.incomes[i].value
     datatype: currency
   - How often does ${x.name.first} receive it?: x.incomes[i].period
     default: 12
     code: |
       period_list()
-
 ---
 id: income information
 generic object: Individual
@@ -515,15 +553,11 @@ question: |
 fields: 
   - Where is the income received from?: x.incomes[i].type
     code: |
-      non_wage_income_list()
+      generate_income_list()
   - Please describe the kind or name of pension plan: x.incomes[i].name
     show if:
       variable: x.incomes[i].type
       is: "pension"
-  - Name of the public benefits program: x.incomes[i].name
-    show if:
-      variable: x.incomes[i].type
-      is: "public assistance"
   - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
     datatype: area
     show if:
@@ -533,6 +567,11 @@ fields:
     show if:
       variable: x.incomes[i].type
       is: "other support"      
+  - Please explain the other sources: x.incomes[i].remarks
+    input type: area
+    show if:
+      variable: x.incomes[i].type
+      is: "other"
   - Amount: x.incomes[i].value
     datatype: currency
   - How often does the person receive it?: x.incomes[i].period
@@ -555,6 +594,11 @@ fields:
     datatype: object_checkboxes
     none of the above: False
     choices: everyone
+  - Name of institution: assets[i].institution_name
+  - Address of institution: assets[i].institute_address
+    address autocomplete: True
+  - Account number: assets[i].account_number
+    datatype: integer
   - Balance : assets[i].balance
     datatype: currency
   - Interest or other income: assets[i].value
@@ -667,16 +711,44 @@ fields:
     code: |
       period_list()
 ---
+id: business/property information
+comment: |
+  business, property, valuables
+question: |
+  Describe the ${ordinal(i)} business, property or valuable owned
+subquestion: |
+  List anyone as the owner who is named as an owner on the deed for this property.
+fields: 
+  - Owner(s): properties[i].owner
+    datatype: object_checkboxes
+    none of the above: False
+    choices: everyone
+  - Description: properties[i].description
+  - Market value: properties[i].market_value
+    datatype: currency
+  - Mortgage balance: properties[i].balance
+    datatype: currency
+    required: False
+  - Income: properties[i].value
+    required: False
+    datatype: currency
+  - Income is collected: properties[i].period
+    required: False
+    default: 12
+    datatype: integer
+    code: |
+      period_list()
+---
 id: expense information prefilled
 if: |
   hasattr(expenses[i],'type')
 comment: |
   expenses
 question: |
-  Amount spent on ${expense_type_list()[expenses[i].type]}
+  Amount spent on ${expense_types()[expenses[i].type]}
 subquestion: |
-  List the amount you spend on ${expense_type_list()[expenses[i].type]}. If you
-  have more than one expense for ${expense_type_list()[expenses[i].type]}, you can
+  List the amount you spend on ${expense_types()[expenses[i].type]}. If you
+  have more than one expense for ${expense_types()[expenses[i].type]}, you can
   add another later.
 fields:
   - Amount: expenses[i].value
@@ -685,11 +757,11 @@ fields:
     default: 12
     code: |
       period_list()
-  - Who are you paying support for, and why?: expenses[i].support_explanation
+  - Please describe your other expense: expenses[i].explanation
     datatype: area
     show if:
       code: |
-        expenses[i].type == "support"      
+        expenses[i].type == "other"      
 ---
 id: expense information
 if: |
@@ -701,7 +773,7 @@ question: |
 fields:
   - Type of expense: expenses[i].type
     code: |
-      expense_type_list()
+      expense_types()
   - Amount: expenses[i].value
     datatype: currency
   - How often do you pay this amount?: expenses[i].period
@@ -726,7 +798,7 @@ table: x.incomes.table
 rows: x.incomes
 columns:
   - Type: |
-      income_type_list()[row_item.type] if defined('row_item.type') else ''
+      income_types_map()[row_item.type] if defined('row_item.type') else ''
   - Monthly Income: |
       currency(row_item.amount(period_to_use=12))
 edit:
@@ -737,7 +809,7 @@ table: x.incomes.display_table
 rows: x.incomes
 columns:
   - Type: |
-      income_type_list()[row_item.type] if defined('row_item.type') else ''
+      income_types_map()[row_item.type] if defined('row_item.type') else ''
   - Monthly Income: |
       currency(row_item.amount(period_to_use=12))
 ---
@@ -747,7 +819,7 @@ columns:
   - Recipient: |
       row_item.recipient
   - Type: |
-      income_type_list()[row_item.type] if defined('row_item.type') else ''      
+      income_types_map()[row_item.type] if defined('row_item.type') else ''      
   - Monthly Income: |
       currency(row_item.amount(period_to_use=12))
 edit:
@@ -759,7 +831,7 @@ columns:
   - Recipient: |
       row_item.recipient
   - Type: |
-      income_type_list()[row_item.type] if defined('row_item.type') else ''      
+      income_types_map()[row_item.type] if defined('row_item.type') else ''      
   - Monthly Income: |
       currency(row_item.amount(period_to_use=12))
 ---
@@ -842,17 +914,23 @@ columns:
   - Purpose: |
       row_item.primary_purpose
 ---
+comment: |
+  This gets big. Not sure how much of this should be shown
 table: assets.table
 rows: assets
 columns:
   - Owner: |
       row_item.owner
+  - Instution name and addresss: |
+      f"{row_item.institution_name}, {row_item.institute_address}"
   - Type: |
       asset_type_list()[row_item.type]
   - Income: |
       currency(row_item.amount()) if (defined('row_item.value') and defined('row_item.period')) else ''
   - Current balance: |
       currency(row_item.balance)
+  - Account number: |
+      row_item.account_number
 edit:
   - period
 ---
@@ -908,21 +986,51 @@ columns:
   - Monthly Rental Income: |
       currency(row_item.amount(period_to_use=12))
 ---
+table: properties.table
+rows: properties
+columns:
+  - Description: |
+      row_item.description
+  - Owner: |
+      row_item.owner
+  - Market value: |
+      currency(row_item.market_value)
+  - Mortgage balance: |
+      currency(row_item.balance)
+  - Monthly Rental Income: |
+      currency(row_item.amount(period_to_use=12))
+edit:
+  - balance
+---
+table: properties.display_table
+rows: properties
+columns:
+  - Description: |
+      row_item.description
+  - Owner: |
+      row_item.owner
+  - Market value: |
+      currency(row_item.market_value)
+  - Mortgage balance: |
+      currency(row_item.balance)
+  - Monthly Rental Income: |
+      currency(row_item.amount(period_to_use=12))
+---
 table: expenses.table
 rows: expenses
 columns:
   - Type: |
-      expense_type_list()[row_item.type]
+      expense_types()[row_item.type]
   - Amount/month: |
       currency(row_item.amount(period_to_use=12))
 edit:
   - type
 ---
 table: expenses.display_table
-rows: list(expense_type_list().keys())
+rows: list(expense_types().keys())
 columns:
   - Type: |
-      expense_type_list()[row_item]
+      expense_types()[row_item]
   - Amount/month: |
       currency(expenses.total(type=row_item,period_to_use=12))
 ---
@@ -1025,6 +1133,12 @@ content: |
   ${real_estate.display_table}
   Total value: ${ currency(real_estate.market_value_total()) } Total annual income: ${ currency(real_estate.total()) }
   
+
+  ### Property
+
+  ${properties.display_table}
+  Total value: ${ currency(properties.market_value_total()) } Total annual income: ${ currency(properties.total()) }
+
   ## Expenses
 
   ${expenses.display_table}

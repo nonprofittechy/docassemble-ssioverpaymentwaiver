@@ -1,6 +1,11 @@
-from docassemble.base.util import validation_error, Address, DAObject, DAList, text_type, Person, title_case
+from docassemble.base.functions import defined, value
+from docassemble.base.util import validation_error, Address, DAEmpty, DAObject, DAList, Person, title_case
 import re
 import requests
+
+def optional(field: str):
+    """Returns the value of the field, if it exists, otherwise empty"""
+    return DAEmpty() if not defined(field) else value(field)
 
 def is_valid_ssn(x):
     """Validates that the field is 3 digits, a hyphen, 2 digits, a hyphen, and 4 final digits only."""
