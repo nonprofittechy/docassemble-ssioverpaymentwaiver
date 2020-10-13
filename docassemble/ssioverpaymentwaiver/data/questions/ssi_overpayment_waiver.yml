@@ -14,7 +14,7 @@ features:
     - phone.js
 ---
 include:
-  - ssa_643.yml
+  - ssa_634.yml
   - financial_statement.yml
   #- docassemble.gbls:basic-questions-gbls.yml
   - docassemble.ssa:ssa.yml
@@ -47,6 +47,7 @@ code: |
   nav.set_section('Who is requesting a waiver?')
   recordee.name.first
   recordee.ssn
+  recordee.claim_number
 
   if not household.there_are_any:
     household.target_number = 0
@@ -66,9 +67,10 @@ code: |
     continue_anyway
   
   if only_change_monthly_due:
+    explain_ssa_634
     ssa_634
   else:
-    pass
+    explain_ssa_632
 
   payment_type
   overpayment_reason
@@ -218,6 +220,8 @@ fields:
   - Social Security Number: recordee.ssn
     datatype: ssn
     validate: is_valid_ssn
+  - Claim number: recordee.claim_number
+    required: False
 ---
 id: representation to overpaid
 question: |
@@ -275,6 +279,33 @@ fields:
 ---
 code: |
   only_change_monthly_due = len(client_goals.true_values()) == 1 and client_goals["change_payment"]
+---
+comment: |
+  Not sure we will leave this in--somewhat in the nature
+  of debugging for now. But could be useful for transparency.
+id: explain ssa 634
+question: |
+  We'll complete form SSA-634 for you
+subquestion: |
+  You said you only are asking the Social Security Administration
+  to change the amount you pay each month. That means we only need
+  to complete form SSA-634.
+  
+  Form SSA-634 is a little simpler and asks fewer questions.
+continue button field: explain_ssa_634  
+---
+id: explain ssa 632
+question: |
+  We'll complete form SSA-632 for you
+subquestion: |
+  % if not len(client_goals.true_values()):
+  You said you aren't sure yet what you want the Social Security Administration
+  to do. That means we'll need to complete form SSA-632.
+  % else:
+  You said you would like the Social Security Administration to change the
+  total amount you will pay back. That means we'll complete form SSA-632.
+  % endif
+continue button field: explain_ssa_632
 ---
 id: exit dont agree overpaid
 decoration: hand-paper
@@ -393,6 +424,17 @@ terms:
   - Why: |
       The Social Security Administration needs this number in order to 
       apply this overpayment waiver request to the right account.
+---
+id: claim number
+generic object: Individual
+question: |
+  Claim number
+subquestion: |
+  If ${x} has a claim number that is different from their Social Security
+  number, enter it below.
+fields:
+  - Claim number: x.claim_number
+    required: False
 ---
 id: review overpaid persons 
 question: |

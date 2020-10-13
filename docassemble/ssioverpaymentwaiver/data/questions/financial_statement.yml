@@ -149,7 +149,9 @@ code: |
 ---
 id: client receives support 
 question: |
-  Do you receive support or contributions from any person or organization?
+  Do you receive any **other** regular financial support?
+subquestion: |
+  For example, extra money that a relative or charity pays you.
 fields:
   - no label: client.receive_support
     datatype: yesnoradio
@@ -597,18 +599,18 @@ fields:
   - Name of institution: assets[i].institution_name
   - Address of institution: assets[i].institute_address
     address autocomplete: True
+    required: False
   - Account number: assets[i].account_number
-    datatype: integer
+    required: False
   - Balance : assets[i].balance
     datatype: currency
-  - Interest or other income: assets[i].value
+  - Interest or other income (enter 0 if you do not receive any income): assets[i].value
     datatype: currency
   - Why don't you have any income from this asset?: assets[i].no_income_explanation
     show if:
       variable: assets[i].value
       is: 0      
   - Income is received: assets[i].period
-    required: False
     code: |
       period_list()
   - Explain what kind of asset this is: assets[i].other_type
@@ -643,7 +645,7 @@ fields:
     choices: everyone
   - Balance : assets[i].balance
     datatype: currency
-  - Interest or other Income: assets[i].value
+  - Interest or other Income (enter 0 if you do not receive any income from this asset): assets[i].value
     datatype: currency
   - Why don't you have any income from this asset?: assets[i].no_income_explanation
     show if:

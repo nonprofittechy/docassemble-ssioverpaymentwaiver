@@ -1,0 +1,301 @@
+---
+modules:
+  - docassemble.income.income
+  - .ssa
+---
+code: |
+  if receiving_benefits:
+    benefit_types_received
+  
+  total_amount_owed
+  overpayment_affordable_amount
+  cash_amount_634
+
+  financial_statement_questions
+
+  # expenses > income
+  if False:
+    expenses_exceed_income_explanation
+
+  expect_inheritance
+  cannot_convert
+
+  download_634
+  ssa_634 = True
+---
+id: receives benefits 634
+question: |
+  Are you currently receiving any needs-based cash benefits?
+subquestion: |
+  Answer yes if you personally receive cash welfare benefits, SSI, or a state cash 
+  benefit that is based on your need.
+yesno: receiving_benefits  
+---
+id: benefits kind
+question: |
+  What kind of cash benefits are you receiving?
+fields: 
+  - no label: benefit_types_received
+    datatype: checkboxes
+    choices:
+      - Supplemental Security Income (SSI): SSI
+      - Temporary Assistance for Needy Families (TANF): TANF
+      - Need-based pension from the Department of Veterans Affairs: VA
+      - Social Security: SS
+      - other
+  - Name of benefits program: receives_benefits_other
+    js show if:
+      val("benefit_types_received['other']")
+---
+id: amount you owe
+question: |
+  How much do you owe?
+fields:
+  - no label: total_amount_owed
+    datatype: currency
+---
+id: amount can pay
+question: |
+  How much can you afford to pay back each month?
+fields:
+  - no label: overpayment_affordable_amount
+    datatype: currency
+    max: ${ total_amount_owed }
+---
+id: cash on hand
+question: |
+  How much money do you have available as cash on hand?
+fields:
+  - no label: cash_amount_634
+    datatype: currency   
+---
+id: Expenses more than income
+question: |
+  Please explain how you are paying your bills.
+subquestion: |
+  If you are not paying your bills, explain which bills have unpaid balances.
+fields:
+  - no label: expenses_exceed_income_explanation
+    input type: area
+---
+id: inheritance
+question: |
+  Do you expect to receive an inheritance within the next 6 months?
+fields:
+  - no label: expect_inheritance
+    datatype: yesnoradio
+  - Please explain: expect_inheritance_explanation
+    input type: area
+    show if:
+      variable: expect_inheritance
+      is: True
+---
+id: convert assets
+question: |
+  Is there any reason you cannot convert or sell the “Balance or Value” of any assets you have into cash?
+fields:
+  - no label: cannot_convert
+    datatype: yesnoradio
+  - Please explain: cannot_convert_explanation
+    input type: area
+    show if:
+      variable: cannot_convert
+      is: True
+---
+code: |
+  user_income_total = currency( client.jobs.net_total(period_to_use=12) + \
+    client.incomes.total(type="SSDI", period_to_use=12) + client.incomes.total(type="SSR", period_to_use=12) + client.incomes.total(type="other Social Security benefits", period_to_use=12) + \
+    client.incomes.total(type="SSI", period_to_use=12) + \
+    client.incomes.total(type="pension", period_to_use=12) + \
+    client.incomes.total(period_to_use=12, type='SNAP') + \
+    properties.total() + real_estate.total() + \
+    client.incomes.total(period_to_use=12, type="room and board") + \
+    client.incomes.total(period_to_use=12, type="alimony") + client.incomes.total(period_to_use=12, type="child support") + \
+    client.incomes.total(period_to_use=12, type="other support") + \
+    assets.total(period_to_use=12) + \
+    client.incomes.total(period_to_use=12, type="other") )
+---
+need:
+  - user_income_total
+comment: |
+  RE net earnings, we seem to default to monthly but actually have more options
+  Not sure how to handle more than two pensions
+id: download pdf
+question: Here is your document.
+event: download_634
+attachment:
+  - name: SSA-634
+    filename: SSA-634
+    pdf template file: ssa-634.pdf
+    fields:
+      - requestor_name: ${ recordee.name }
+      - requestor_ssn: ${ recordee.ssn }
+      - requestor_claim_number: ${ recordee.claim_number }
+      - is_overpaid_person: ${ recordee == client }
+      - is_overpaid_person_no: ${ not recordee == client }
+      - am_overpaid_parent: ${ optional('relationship_to_overpaid["parent"]')}
+      - am_overpaid_spouse: ${ optional('relationship_to_overpaid["spouse"]')}
+      - am_overpaid_rep_payee: ${ optional('relationship_to_overpaid["representative payee"]')}
+      - am_overpaid_guardian: ${ optional('relationship_to_overpaid["legal guardian"]')}
+      - overpaid_other_relationship: ${ optional('relationship_to_overpaid["other"]')}
+      - other_relationship_with_overpaid: ${ optional('other_relationship') }
+      - filer_name: ${ "" if recordee == client else client.name }
+      - receiving_ssi: ${ optional('benefit_types_received["SSI"]') }
+      - receiving_tanf: ${ optional('benefit_types_received["TANF"]') }
+      - receiving_va_pension: ${ optional('benefit_types_received["VA"]') }
+      - receiving_ss: ${ optional('benefit_types_received["SS"]') }
+      - not_receiving_benefits: ${ not receiving_benefits }
+      - total_amount_owed: ${ total_amount_owed }
+      - overpayment_affordable_amount: ${ overpayment_affordable_amount }
+      - cash_amount: ${ cash_amount_634 }
+      - account_type_1: ${ assets.item(0).type }
+      - receive_support: ${ client.receive_support }
+      - receive_support_no: ${ not client.receive_support }
+      - receive_support_loan_agree: ${ optional("client.support_under_loan") }
+      - receive_support_loan_agree_no: ${ not isinstance(optional("client.support_under_loan"), DAEmpty) }
+      - receive_support_amount: ${ optional("client.receive_support_amount") }
+      - receive_support_source: ${ optional("client.receive_support_source") }
+      - institution_name_address_1: ${ f"{assets.item(0).institution_name}\n{ assets.item(0).institute_address}"}
+      - account_owner_1: ${ assets.item(0).owner }
+      - balance_value_1: ${ assets.item(0).balance }
+      - income_monthly_1: ${ assets.item(0).amount(period_to_use=12) }
+      - account_number_1: ${ assets.item(0).account_number }
+      - account_type_2: ${ assets.item(1).type }
+      - institution_name_address_2: ${ f"{assets.item(1).institution_name}\n{ assets.item(1).institute_address}"}
+      - account_owner_2: ${ assets.item(1).owner }
+      - balance_value_2: ${ assets.item(1).balance }
+      - income_monthly_2: ${ assets.item(1).amount(period_to_use=12) }
+      - account_number_2: ${ assets.item(1).account_number }
+      - account_type_3: ${ assets.item(2).type }
+      - institution_name_address_3: ${ f"{assets.item(2).institution_name}\n{ assets.item(2).institute_address}"}
+      - account_owner_3: ${ assets.item(2).owner }
+      - balance_value_3: ${ assets.item(2).balance }
+      - income_monthly_3: ${ assets.item(2).amount(period_to_use=12) }
+      - account_number_3: ${ assets.item(2).account_number }
+      - account_type_4: ${ assets.item(3).type }
+      - institution_name_address_4: ${ f"{assets.item(3).institution_name}\n{ assets.item(3).institute_address}"}
+      - account_owner_4: ${ assets.item(3).owner }
+      - balance_value_4: ${ assets.item(3).balance }
+      - income_monthly_4: ${ assets.item(3).amount(period_to_use=12) }
+      - account_number_4: ${ assets.item(3).account_number }
+      - account_type_5: ${ assets.item(4).type }
+      - institution_name_address_5: ${ f"{assets.item(4).institution_name}\n{ assets.item(3).institute_address}"}
+      - account_owner_5: ${ assets.item(4).owner }
+      - balance_value_5: ${ assets.item(4).balance }
+      - income_monthly_5: ${ assets.item(4).amount(period_to_use=12) }
+      - account_number_5: ${ assets.item(4).account_number }
+      - countable_asset_total_amount: ${currency(assets.balance_total())}
+      - countable_asset_total_monthly: ${currency(assets.total(period_to_use=12))}
+      - more_than_one_vehicle: ${ vehicles.there_are_any }
+      - more_than_one_vehicle_no: ${ not vehicles.there_are_any }
+      - vehicle_owner_1: ${vehicles.item(0).owner}
+      - vehicle_year_make_model_1: ${vehicles.item(0).year_make_model() }
+      - vehicle_pv_1: ${currency(vehicles.item(0).value)}
+      - vehicle_loan_balance_1: ${currency(vehicles.item(0).balance)}
+      - vehicle_purpose_1: ${vehicles.item(0).primary_purpose}
+      - vehicle_owner_2: ${vehicles.item(1).owner}
+      - vehicle_year_make_model_2: ${vehicles.item(1).year_make_model() }
+      - vehicle_pv_2: ${currency(vehicles.item(1).value)}
+      - vehicle_loan_balance_2: ${currency(vehicles.item(1).balance)}
+      - vehicle_purpose_2: ${vehicles.item(1).primary_purpose}
+      - vehicle_owner_3: ${vehicles.item(2).owner}
+      - vehicle_year_make_model_3: ${vehicles.item(2).year_make_model() }
+      - vehicle_pv_3: ${currency(vehicles.item(2).value)}
+      - vehicle_loan_balance_3: ${currency(vehicles.item(2).balance)}
+      - vehicle_purpose_3: ${vehicles.item(2).primary_purpose}
+      - vehicle_countable_value: ${ vehicles.total() }
+      - hold_any_real_estate: ${ real_estate.there_are_any }
+      - hold_any_real_estate_no: ${ not real_estate.there_are_any }
+      - real_estate_owner_1: ${real_estate.item(0).owner}
+      - real_estate_description_1: ${real_estate.item(0).description}
+      - real_estate_value_1: ${currency(real_estate.item(0).market_value)}
+      - real_estate_loan_balance_1: ${currency(real_estate.item(0).balance)}
+      - real_estate_income_1: ${currency(real_estate.item(0).amount(period_to_use=12))}
+      - real_estate_owner_2: ${real_estate.item(1).owner}
+      - real_estate_description_2: ${real_estate.item(1).description}
+      - real_estate_value_2: ${currency(real_estate.item(1).market_value)}
+      - real_estate_loan_balance_2: ${currency(real_estate.item(1).balance)}
+      - real_estate_income_2: ${currency(real_estate.item(1).amount(period_to_use=12))}
+      - real_estate_owner_3: ${real_estate.item(2).owner}
+      - real_estate_description_3: ${real_estate.item(2).description}
+      - real_estate_value_3: ${currency(real_estate.item(2).market_value)}
+      - real_estate_loan_balance_3: ${currency(real_estate.item(2).balance)}
+      - real_estate_income_3: ${currency(real_estate.item(2).amount(period_to_use=12))}
+      - real_estate_value_total: ${ currency(real_estate.total()) }
+      - has_interest_business_prop: ${ properties.there_are_any }
+      - has_interest_business_prop_no: ${ not properties.there_are_any }
+      - property_owner_1: ${properties.item(0).owner}
+      - property_description_1: ${properties.item(0).description}
+      - property_value_1: ${currency(properties.item(0).market_value)}
+      - property_loan_balance_1: ${currency(properties.item(0).balance)}
+      - property_income_1: ${currency(properties.item(0).amount(period_to_use=12))}
+      - property_owner_2: ${properties.item(1).owner}
+      - property_description_2: ${properties.item(1).description}
+      - property_value_2: ${currency(properties.item(1).market_value)}
+      - property_loan_balance_2: ${currency(properties.item(1).balance)}
+      - property_income_2: ${currency(properties.item(1).amount(period_to_use=12))}
+      - property_owner_3: ${properties.item(2).owner}
+      - property_description_3: ${properties.item(2).description}
+      - property_value_3: ${currency(properties.item(2).market_value)}
+      - property_loan_balance_3: ${currency(properties.item(2).balance)}
+      - property_income_3: ${currency(properties.item(2).amount(period_to_use=12))}
+      - property_value_total: ${ currency(properties.total()) }
+      - user_employed: ${client.jobs.there_are_any}
+      - user_employed_no: ${ not client.jobs.there_are_any }
+      - user_employer_name_address_phone: ${"\n".join([job.name_address_phone() for job in client.jobs])}
+      - user_wages_net: ${currency(client.jobs.net_total(period_to_use=12))}
+      - net_earnings_monthly: True
+      - user_net_pay_total: ${currency(client.jobs.net_total(period_to_use=12))}
+      - user_ss_total: ${ currency(client.incomes.total(type="SSDI", period_to_use=12) + client.incomes.total(type="SSR", period_to_use=12) + client.incomes.total(type="other Social Security benefits", period_to_use=12) )}
+      - user_ssi_total: ${ currency(client.incomes.total(type="SSI") )}
+      - pension_type_1: ${ client.incomes.matches("pension").item(0).name }
+      - user_pension_1: ${ currency(client.incomes.matches("pension").item(0).amount(period_to_use=12)) }
+      - pension_type_2: ${ client.incomes.matches("pension").item(1).name }
+      - user_pension_2: ${ currency(client.incomes.matches("pension").item(1).amount(period_to_use=12)) }
+      - user_snap_total: ${ currency(client.incomes.total(period_to_use=12, type='SNAP'))}
+      - user_rent_income_total: ${currency(properties.total() + real_estate.total())} # property_value_total + real_estate_value_total
+      - user_room_board_total: ${ currency(client.incomes.total(period_to_use=12, type="room and board"))}
+      - user_child_support_total: ${ currency(client.incomes.total(period_to_use=12, type="alimony") + client.incomes.total(period_to_use=12, type="child support"))}
+      - user_other_support_total: ${ currency(client.incomes.total(period_to_use=12, type="other support")) }
+      - user_asset_income_total: ${ currency(assets.total(period_to_use=12)) }
+      - user_other_total: ${ currency(client.incomes.total(period_to_use=12, type="other")) }
+      - user_income_total: ${ user_income_total }  
+      - expense_rent: ${currency(expenses.total(period_to_use=12, type="rent"))}
+      - expense_food: ${currency(expenses.total(period_to_use=12, type="food"))}
+      - expense_utilities: ${currency(expenses.total(period_to_use=12, type="utilities"))}
+      - expense_fuel: ${currency(expenses.total(period_to_use=12, type="fuel"))}
+      - expense_clothing: ${currency(expenses.total(period_to_use=12, type="clothing"))}
+      - expense_household_items: ${currency(expenses.total(period_to_use=12, type="household items"))}
+      - expense_property_tax: ${currency(expenses.total(period_to_use=12, type="property tax"))}
+      - expense_insurance: ${currency(expenses.total(period_to_use=12, type="insurance"))}
+      - expense_medical: ${currency(expenses.total(period_to_use=12, type="medical"))}
+      - expense_car_loan: ${currency(expenses.total(period_to_use=12, type="car loan"))}
+      - expense_car: ${currency(expenses.total(period_to_use=12, type="car expenses"))}
+      - expense_transportation: ${currency(expenses.total(period_to_use=12, type="transportation"))}
+      - expense_tuition: ${currency(expenses.total(period_to_use=12, type="school"))}
+      - expense_court_ordered: ${currency(expenses.total(period_to_use=12, type="court order"))}
+      - expense_cc_minimum: ${currency(expenses.total(period_to_use=12, type="credit card"))}
+      - expense_other: ${currency(expenses.total(period_to_use=12, type="other"))}
+      - expenses_total: ${currency(expenses.total(period_to_use=12))}
+      - monthly_income: "TODO"
+      - monthly_expenses: ${ currency(expenses.total(period_to_use=12)) }
+      - total: "TODO"
+      - expenses_exceed_income_explanation: ${ optional("expenses_exceed_income_explanation") }
+      - expect_inheritance_six_months: ${ expect_inheritance }
+      - expect_inheritance_six_months_no: ${ not expect_inheritance } 
+      - expect_inheritance_six_months_explanation: ${ optional("expect_inheritance_explanation") }
+      - cant_convert_countable_asset: ${ cannot_convert }
+      - cant_convert_countable_asset_no: ${ not cannot_convert }
+      - cant_convert_countable_asset_explanation: |
+          % if cannot_convert: 
+          ${ cannot_convert_explanation }
+          % endif
+      - total_assets: TODO
+      - signature: ${client.signature if defined('client.signature') else ''}
+      - signature_date: ${today()}
+      - phone_work: ${client.phone_work}
+      - phone_home: ${client.phone_number}
+      - user_mailing_address: ${client.address.address}
+      - user_city: ${client.address.city}
+      - user_state: ${client.address.state}
+      - user_zip: ${ client.address.zip }
