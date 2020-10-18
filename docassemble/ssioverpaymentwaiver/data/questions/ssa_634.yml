@@ -277,9 +277,9 @@ attachment:
       - expense_cc_minimum: ${currency(expenses.total(period_to_use=12, type="credit card"))}
       - expense_other: ${currency(expenses.total(period_to_use=12, type="other"))}
       - expenses_total: ${currency(expenses.total(period_to_use=12))}
-      - monthly_income: "TODO"
-      - monthly_expenses: ${ currency(expenses.total(period_to_use=12)) }
-      - total: "TODO"
+      - monthly_income: ${ currency( user_income_total) } # ${ currency(client.incomes.total(period_to_use=12) + properties.total(period_to_use=12) + real_estate.total(period_to_use=12) + assets.total(period_to_use=12) ) }
+      - monthly_expenses: ${ currency(expenses.total(period_to_use=12)) } # TODO
+      - total: ${ currency( user_income_total - expenses.total(period_to_use=12) ) }
       - expenses_exceed_income_explanation: ${ optional("expenses_exceed_income_explanation") }
       - expect_inheritance_six_months: ${ expect_inheritance }
       - expect_inheritance_six_months_no: ${ not expect_inheritance } 
@@ -290,7 +290,7 @@ attachment:
           % if cannot_convert: 
           ${ cannot_convert_explanation }
           % endif
-      - total_assets: TODO
+      - total_assets: ${ assets.total(period_to_use=12) }
       - signature: ${client.signature if defined('client.signature') else ''}
       - signature_date: ${today()}
       - phone_work: ${client.phone_work}
