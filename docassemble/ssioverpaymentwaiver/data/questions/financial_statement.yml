@@ -411,7 +411,7 @@ fields:
   - no label: expenses_types
     datatype: checkboxes
     code: |
-      expense_types().keys()
+      expense_types().keys()      
 ---
 code: |
   if expenses_types.any_true():
@@ -427,6 +427,11 @@ fields:
   - Type of expense: expenses[i].type
     code: |
       expense_types()
+  - Kind of utilities: expenses[i].utility_kind
+    required: False
+    show if:
+      code: |
+        expenses[i].type == 'utilities'      
   - Amount: expenses[i].value
     datatype: currency
   - How often do you pay this amount?: expenses[i].period
@@ -443,6 +448,11 @@ subquestion: |
 fields:
   - Amount: expenses[i].value
     datatype: currency
+  - Kind of utilities: expenses[i].utility_kind
+    required: False
+    show if:
+      code: |
+        expenses[i].type == 'utilities'
   - How often do you pay this amount?: expenses[i].period
     default: 12
     code: |
@@ -758,6 +768,11 @@ subquestion: |
 fields:
   - Amount: expenses[i].value
     datatype: currency
+  - Kind of utilities: expenses[i].utility_kind
+    required: False
+    show if:
+      code: |
+        expenses[i].type == 'utilities'         
   - How often do you pay this amount?: expenses[i].period
     default: 12
     code: |
@@ -779,6 +794,11 @@ fields:
   - Type of expense: expenses[i].type
     code: |
       expense_types()
+  - Kind of utilities: expenses[i].utility_kind
+    required: False
+    show if:
+      variable: expenses[i].type
+      is: 'utilities'
   - Amount: expenses[i].value
     datatype: currency
   - How often do you pay this amount?: expenses[i].period
@@ -1025,7 +1045,7 @@ table: expenses.table
 rows: expenses
 columns:
   - Type: |
-      expense_types()[row_item.type]
+      expense_types()[row_item.type] if not hasattr(row_item, 'utility_kind') else expense_types()[row_item.type] + ' (' + row_item.utility_kind + ')'
   - Amount/month: |
       currency(row_item.amount(period_to_use=12))
 edit:
