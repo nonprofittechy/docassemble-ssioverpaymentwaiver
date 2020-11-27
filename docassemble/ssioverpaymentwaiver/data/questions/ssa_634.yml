@@ -103,7 +103,7 @@ fields:
       is: True
 ---
 code: |
-  user_income_total = currency( client.jobs.net_total(period_to_use=12) + \
+  user_income_total = client.jobs.net_total(period_to_use=12) + \
     client.incomes.total(type="SSDI", period_to_use=12) + client.incomes.total(type="SSR", period_to_use=12) + client.incomes.total(type="other Social Security benefits", period_to_use=12) + \
     client.incomes.total(type="SSI", period_to_use=12) + \
     client.incomes.total(type="pension", period_to_use=12) + \
@@ -113,7 +113,7 @@ code: |
     client.incomes.total(period_to_use=12, type="alimony") + client.incomes.total(period_to_use=12, type="child support") + \
     client.incomes.total(period_to_use=12, type="other support") + \
     assets.total(period_to_use=12) + \
-    client.incomes.total(period_to_use=12, type="other") )
+    client.incomes.total(period_to_use=12, type="other")
 ---
 need:
   - user_income_total
@@ -259,7 +259,7 @@ attachment:
       - user_other_support_total: ${ currency(client.incomes.total(period_to_use=12, type="other support")) }
       - user_asset_income_total: ${ currency(assets.total(period_to_use=12)) }
       - user_other_total: ${ currency(client.incomes.total(period_to_use=12, type="other")) }
-      - user_income_total: ${ user_income_total }  
+      - user_income_total: ${ currency(user_income_total) }  
       - expense_rent: ${currency(expenses.total(period_to_use=12, type="rent"))}
       - expense_food: ${currency(expenses.total(period_to_use=12, type="food"))}
       - expense_utilities: ${currency(expenses.total(period_to_use=12, type="utilities"))}

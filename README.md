@@ -4,6 +4,7 @@ An interview to help an individual appeal an overpayment set by the Social
 Security Administration.
 
 # Changelog
+* 2020-11-27 Bugfixes
 * 2020-11-14 Add feedback form + show question ID on debug site
 * 2020-10-12 Fix template export value
 * 2020-09-28 Modified financial statement, prepared SSA-634

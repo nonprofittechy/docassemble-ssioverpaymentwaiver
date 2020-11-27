@@ -472,7 +472,10 @@ fields:
     hint: $/hour
   - Average number of hours worked each pay check: x.jobs[i].hours_per_period
     datatype: integer
-    show if: x.jobs[i].is_hourly        
+    show if: x.jobs[i].is_hourly    
+  - Amount earned before taxes and deductions (gross pay): x.jobs[i].value
+    datatype: currency
+    hide if: x.jobs[i].is_hourly
   - Take home pay (net pay) each typical pay check: x.jobs[i].net
     datatype: currency    
   - How often does ${x.name.first} receive a pay check?: x.jobs[i].period
