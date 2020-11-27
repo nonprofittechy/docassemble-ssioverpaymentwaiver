@@ -946,15 +946,13 @@ rows: assets
 columns:
   - Owner: |
       row_item.owner
-  - Instution name and addresss: |
-      f"{row_item.institution_name}, {row_item.institute_address}"
   - Type: |
       asset_type_list()[row_item.type]
   - Income: |
       currency(row_item.amount()) if (defined('row_item.value') and defined('row_item.period')) else ''
-  - Current balance: |
+  - Balance: |
       currency(row_item.balance)
-  - Account number: |
+  - "Account #": |
       row_item.account_number
 edit:
   - period
