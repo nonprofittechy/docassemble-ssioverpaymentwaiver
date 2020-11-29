@@ -238,7 +238,7 @@ subquestion:
   You are ${recordee.possessive("___")}
 fields:
   - no label: relationship_to_overpaid
-    input type: checkboxes
+    #input type: checkboxes
     choices:
       - parent
       - spouse

@@ -19,7 +19,7 @@ def income_types_map() -> dict:
     "SSDI": "Social Security Disability Benefits",
     "SSR": "Social Security Retirement Benefits",
     "SSI": "Supplemental Security Income (SSI)",
-    "other Social Security benefits": "other Social Security benefits [TODO]",
+    "other Social Security benefits": "other Social Security benefits",
     "pension": "Pension",
     "SNAP": "Food Stamps (SNAP)",
     "rent": "Income from real estate (rent, etc)",
@@ -33,7 +33,7 @@ def income_types_map() -> dict:
 def expense_types() -> list:
   return {
     "rent": "Rent",
-    "mortgate": "Mortgage",
+    "mortgage": "Mortgage",
     "food": "Food",
     "utilities": "Utilities",
     "fuel": "Other Heating/Cooking Fuel",

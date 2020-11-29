@@ -133,11 +133,11 @@ attachment:
       - requestor_claim_number: ${ recordee.claim_number }
       - is_overpaid_person: ${ recordee == client }
       - is_overpaid_person_no: ${ not recordee == client }
-      - am_overpaid_parent: ${ optional('relationship_to_overpaid["parent"]')}
-      - am_overpaid_spouse: ${ optional('relationship_to_overpaid["spouse"]')}
-      - am_overpaid_rep_payee: ${ optional('relationship_to_overpaid["representative payee"]')}
-      - am_overpaid_guardian: ${ optional('relationship_to_overpaid["legal guardian"]')}
-      - overpaid_other_relationship: ${ optional('relationship_to_overpaid["other"]')}
+      - am_overpaid_parent: ${ relationship_to_overpaid == "parent" if not recordee == client else ''}
+      - am_overpaid_spouse: ${ relationship_to_overpaid == "spouse" if not recordee == client else ''}
+      - am_overpaid_rep_payee: ${ relationship_to_overpaid == "representative payee" if not recordee == client else ''}
+      - am_overpaid_guardian: ${ relationship_to_overpaid == "legal guardian" if not recordee == client else ''}
+      - overpaid_other_relationship: ${ relationship_to_overpaid == "other" if not recordee == client else ''}
       - other_relationship_with_overpaid: ${ optional('other_relationship') }
       - filer_name: ${ "" if recordee == client else client.name }
       - receiving_ssi: ${ optional('benefit_types_received["SSI"]') }
@@ -277,7 +277,7 @@ attachment:
       - expense_cc_minimum: ${currency(expenses.total(period_to_use=12, type="credit card"))}
       - expense_other: ${currency(expenses.total(period_to_use=12, type="other"))}
       - expenses_total: ${currency(expenses.total(period_to_use=12))}
-      - monthly_income: ${ currency( user_income_total) } # ${ currency(client.incomes.total(period_to_use=12) + properties.total(period_to_use=12) + real_estate.total(period_to_use=12) + assets.total(period_to_use=12) ) }
+      - monthly_income: ${ currency( user_income_total) } # ${ currency(client.incomes.total(period_to_use=12) + properties.total(period_to_use=12) + real_e#state.total(period_to_use=12) + assets.total(period_to_use=12) ) }
       - monthly_expenses: ${ currency(expenses.total(period_to_use=12)) } # TODO
       - total: ${ currency( user_income_total - expenses.total(period_to_use=12) ) }
       - expenses_exceed_income_explanation: ${ optional("expenses_exceed_income_explanation") }
@@ -298,4 +298,4 @@ attachment:
       - user_mailing_address: ${client.address.address}
       - user_city: ${client.address.city}
       - user_state: ${client.address.state}
-      - user_zip: ${ client.address.zip }
+      - user_zip: ${ client.address.zip }#
