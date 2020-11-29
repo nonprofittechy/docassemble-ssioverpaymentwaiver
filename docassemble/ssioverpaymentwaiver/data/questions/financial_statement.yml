@@ -134,14 +134,22 @@ code: |
         household.incomes.append(income)
   household.incomes.gathered = True
 ---  
+depends on:
+  - has_spouse
+  - household
 code: |
+  everyone.clear()
   everyone.append(client)
   if has_spouse:
     everyone.append(spouse)
   everyone.extend(household)
   everyone.gathered = True
 ---
+depends on:
+  - has_spouse
+  - household
 code: |
+  everyone_but_me.clear()
   if has_spouse:
     everyone_but_me.append(spouse)
   everyone_but_me.extend(household)
