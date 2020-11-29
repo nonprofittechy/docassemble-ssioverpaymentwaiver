@@ -15,7 +15,7 @@ objects:
   - everyone_but_me: DAList.using(auto_gather=False)                         
   - household.jobs: JobList.using(auto_gather = False)
   - household.incomes: IncomeList.using(auto_gather = False)  
-  - assets: IncomeList.using(there_is_another=False,complete_attribute='type')
+  - assets: AssetList.using(there_is_another=False,complete_attribute='type')
   - vehicles: VehicleList.using(there_is_another=False,complete_attribute='value')
   - real_estate: IncomeList.using(there_is_another=False,complete_attribute='value')
   - properties: IncomeList.using(there_is_another=False,complete_attribute='value')
@@ -140,6 +140,8 @@ depends on:
 code: |
   everyone.clear()
   everyone.append(client)
+  if recordee != client:
+    everyone.append(recordee)
   if has_spouse:
     everyone.append(spouse)
   everyone.extend(household)
@@ -150,6 +152,8 @@ depends on:
   - household
 code: |
   everyone_but_me.clear()
+  if recordee != client:
+    everyone.append(recordee)  
   if has_spouse:
     everyone_but_me.append(spouse)
   everyone_but_me.extend(household)
@@ -180,6 +184,10 @@ fields:
 id: who lives with client  
 question: |
   Who lives with you?
+subquestion: |
+  The Social Security Administration needs to know about your household
+  and your financial picture to change the amount or time you take to pay
+  them back.
 fields:
   - My spouse: has_spouse
     datatype: yesno
@@ -634,6 +642,9 @@ fields:
   - Income is received: assets[i].period
     code: |
       period_list()
+    hide if:     
+      variable: assets[i].value
+      is: 0
   - Explain what kind of asset this is: assets[i].other_type
     datatype: area
     show if:
@@ -675,6 +686,9 @@ fields:
   - Income is received: assets[i].period
     code: |
       period_list()
+    hide if:     
+      variable: assets[i].value
+      is: 0      
 ---
 id: vehicle information
 comment: |
@@ -700,7 +714,7 @@ fields:
   - Loan balance: vehicles[i].balance    
     datatype: currency
     required: False
-  - Main purpose for use: vehicles[i].primary_purpose
+  - Main purpose for use (type or select one of these choices): vehicles[i].primary_purpose
     input type: combobox
     choices: 
       - Recreation
@@ -820,7 +834,10 @@ fields:
       is: "support"      
 ---
 question: |
-  Explain any unusual or very large expenses (optional)
+  Optional: tell SSA more about your expenses
+subquestion: |
+  For example, if any of the expenses you listed are very large or 
+  uncommon, give any explanation that may be helpful to the agency.
 fields:
   - Write down any explanation you want to give about a large or unusual expense: expense_other_details
     datatype: area

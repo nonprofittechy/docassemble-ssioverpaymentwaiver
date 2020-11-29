@@ -54,9 +54,14 @@ code: |
 
   nav.set_section('Who is requesting a waiver?')
   recordee.name.first
+  
+  agree_overpaid
+  if not agree_overpaid:
+    continue_anyway
+    
   recordee.ssn
-  recordee.claim_number
-
+  recordee.claim_number    
+    
   if not household.there_are_any:
     household.target_number = 0
     household.gathered = True
@@ -68,11 +73,15 @@ code: |
   
   beneficiary.name.first
   
-  nav.set_section('Information about the overpayment')
+  if has_spouse:
+    spouse.name.first
+  if household.there_are_any:
+    review_household_members
+
+  if overpaid_persons.there_are_any:
+    review_overpaid_persons  
   
-  agree_overpaid
-  if not agree_overpaid:
-    continue_anyway
+  nav.set_section('Information about the overpayment')
   
   if only_change_monthly_due:
     explain_ssa_634
@@ -86,14 +95,6 @@ code: |
 
   overpayment_benefits_used_for    
   overpayment_why_not_at_fault  
-
-  if has_spouse:
-    spouse.name.first
-  if household.there_are_any:
-    review_household_members
-
-  if overpaid_persons.there_are_any:
-    review_overpaid_persons
   
   if not possess_overpayment:
     if possessed_overpayment_at_notice:
@@ -225,11 +226,11 @@ fields:
   - Middle name: recordee.name.middle
     required: False
   - Last name: recordee.name.last
-  - Social Security Number: recordee.ssn
-    datatype: ssn
-    validate: is_valid_ssn
-  - Claim number: recordee.claim_number
-    required: False
+  #- Social Security Number: recordee.ssn
+  #  datatype: ssn
+  #  validate: is_valid_ssn
+  #- Claim number: recordee.claim_number
+  #  required: False
 ---
 id: representation to overpaid
 question: |
@@ -367,20 +368,25 @@ subquestion: |
   If ${recordee} both earned and uses the benefits, just select their name here.
 fields:
   - Somebody already mentioned: beneficiary
-    datatype: object
+    datatype: object_radio
     disable others: True
     choices: |
       everyone
+    none of the above: True      
+    object labeler: |
+      lambda y: str(y) if y != client else 'Me (' + str(y) + ')'
   - First name: beneficiary.name.first
   - Last name: beneficiary.name.last
   - Address: beneficiary.address.address
     address autocomplete: True
   - Unit or Apt: beneficiary.address.unit
+    required: False
   - City: beneficiary.address.city
   - State: beneficiary.address.state
     code: |
       states_list()
   - Zip code: beneficiary.address.zip
+    required: False
   - County: beneficiary.address.county
     required: False      
 ---
@@ -632,8 +638,7 @@ id: ability to pay
 question: |
   Can you pay back the full amount?
 subquestion: |
-  Check any of the below that apply, or none of the above if you can pay everything
-  back.
+  Check any of the below that apply
 fields:
   - no label: overpayment_pay_less_reasons
     datatype: checkboxes
@@ -641,6 +646,7 @@ fields:
       - I cannot afford to pay back the money
       - The overpayment was not my fault
       - Requiring me to pay back the overpayment is unfair
+    none of the above: None of the above. I can pay **everything** back      
 ---
 code: |
   overpayment_not_my_fault = overpayment_pay_less_reasons['The overpayment was not my fault']
@@ -649,9 +655,16 @@ code: |
 id: amount can pay
 question: |
   How much can you afford to pay back each month?
+  
 fields:
-  - no label: affordable_amount
+  - I cannot pay anything at all: cant_pay_at_all
+    datatype: yesno
+  - '': affordable_amount
     datatype: currency
+    hide if: cant_pay_at_all
+validation code: |
+  if cant_pay_at_all:
+    affordable_amount = 0
 ---
 id: ssi payment status
 question: |
@@ -815,8 +828,8 @@ fields:
   - no label: accounts_special_purpose
     datatype: object_checkboxes
     choices: cash_assets
-    #object labeler: |
-    #  lambda y: y.type + ':' +' '  + currency(y.balance)
+    object labeler: |
+      lambda y: y.type + ':' +' '  + currency(y.balance)
   - Explain what the special purpose is: accounts_special_purpose_explanation
     datatype: area        
     required: False
