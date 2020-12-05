@@ -53,7 +53,7 @@ setup(name='docassemble.ssioverpaymentwaiver',
       url='https://docassemble.org',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=['docassemble.GithubFeedbackForm', 'docassemble.income', 'docassemble.ssa'],
+      install_requires=['docassemble.GithubFeedbackForm>=0.0.1', 'docassemble.income>=0.0.33', 'docassemble.ssa'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/ssioverpaymentwaiver/', package='docassemble.ssioverpaymentwaiver'),
      )

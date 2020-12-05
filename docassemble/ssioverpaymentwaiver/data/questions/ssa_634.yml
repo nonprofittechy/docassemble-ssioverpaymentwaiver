@@ -54,7 +54,7 @@ fields:
   - no label: total_amount_owed
     datatype: currency
 ---
-id: amount can pay
+id: amount can pay 634
 question: |
   How much can you afford to pay back each month?
 fields:
