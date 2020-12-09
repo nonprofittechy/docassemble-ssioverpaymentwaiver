@@ -12,7 +12,8 @@ objects:
                             ask_number = True,
                             complete_attribute='complete')
   - everyone: DAList.using(auto_gather=False)
-  - everyone_but_me: DAList.using(auto_gather=False)                         
+  - everyone_but_me: DAList.using(auto_gather=False) 
+  - who_overpaid_options: DAList.using(auto_gather=False)
   - household.jobs: JobList.using(auto_gather = False)
   - household.incomes: IncomeList.using(auto_gather = False)  
   - assets: AssetList.using(there_is_another=False,complete_attribute='type')
@@ -158,6 +159,17 @@ code: |
     everyone_but_me.append(spouse)
   everyone_but_me.extend(household)
   everyone_but_me.gathered = True
+---
+depends on:
+  - has_spouse
+  - household
+code: |
+  who_overpaid_options.clear()
+  who_overpaid_options.append(client)
+  if has_spouse:
+    who_overpaid_options.append(spouse)
+  who_overpaid_options.extend(household)
+  who_overpaid_options.gathered = True
 ---
 id: client receives support 
 question: |

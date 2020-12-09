@@ -51,9 +51,12 @@ code: |
   nav.set_section('Getting started')
   intro_screen
   client.name.first
+  
 
   nav.set_section('Who is requesting a waiver?')
+  household_questions
   recordee.name.first
+  
   
   agree_overpaid
   if not agree_overpaid:
@@ -222,7 +225,7 @@ fields:
     none of the above: |
       Someone else
     choices: |
-      [client]
+      who_overpaid_options
   - First name: recordee.name.first
   - Middle name: recordee.name.middle
     required: False
