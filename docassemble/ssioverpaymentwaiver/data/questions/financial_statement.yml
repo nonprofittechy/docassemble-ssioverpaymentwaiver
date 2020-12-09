@@ -650,6 +650,9 @@ fields:
     show if:
       code: |
         assets[i].type == "other"
+validation code: |
+  if assets[i].value == 0:
+    assets[i].period = 12
 ---
 id: asset information
 if: |
@@ -689,6 +692,9 @@ fields:
     hide if:     
       variable: assets[i].value
       is: 0      
+validation code: |
+  if assets[i].value == 0:
+    assets[i].period = 12      
 ---
 id: vehicle information
 comment: |

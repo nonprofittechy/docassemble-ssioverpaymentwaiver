@@ -218,6 +218,7 @@ fields:
   - no label: recordee
     datatype: object_radio
     disable others: True
+    default: client
     none of the above: |
       Someone else
     choices: |
@@ -369,10 +370,11 @@ subquestion: |
 fields:
   - Somebody already mentioned: beneficiary
     datatype: object_radio
+    default: client
     disable others: True
     choices: |
       everyone
-    none of the above: True      
+    none of the above: Someone else      
     object labeler: |
       lambda y: str(y) if y != client else 'Me (' + str(y) + ')'
   - First name: beneficiary.name.first
