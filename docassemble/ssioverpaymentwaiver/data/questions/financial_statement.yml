@@ -273,7 +273,7 @@ edit:
   - name.first
 ---
 id: household review
-question: Household members
+question: Household members that depend on you for support
 subquestion: |
   So far you've told us about ${len(household)} household ${noun_plural('members',len(household))}.
   You can add more or continue to the next question.
@@ -769,6 +769,12 @@ fields:
     datatype: integer
     code: |
       period_list()
+    hide if:
+      variable: real_estate[i].value
+      is: 0
+validation code: |
+  if not real_estate[i].value:
+    real_estate[i].period = 12
 ---
 id: business/property information
 comment: |
@@ -1090,7 +1096,7 @@ table: expenses.table
 rows: expenses
 columns:
   - Type: |
-      expense_types()[row_item.type] if not hasattr(row_item, 'utility_kind') else expense_types()[row_item.type] + ' (' + row_item.utility_kind + ')'
+      expense_types()[row_item.type] if not hasattr(row_item, 'utility_kind') or not row_item.utility_kind else expense_types()[row_item.type] + ' (' + row_item.utility_kind + ')'
   - Amount/month: |
       currency(row_item.amount(period_to_use=12))
 edit:

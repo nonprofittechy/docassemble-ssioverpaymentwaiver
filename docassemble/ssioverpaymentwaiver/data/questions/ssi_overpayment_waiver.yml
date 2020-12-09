@@ -745,7 +745,7 @@ subquestion: |
   You said that you told Social Security about the overpayment, but it wasn't by 
   phone or in person.
 fields:
-  - Explain how, when and where you told Social Security about ${overpayment_reason}.: how_when_where
+  - Explain how, when and where you told Social Security that you were being overpaid.: how_when_where
     datatype: area
 ---
 id: ssa contact followup

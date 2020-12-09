@@ -4,6 +4,7 @@ An interview to help an individual appeal an overpayment set by the Social
 Security Administration.
 
 # Changelog
+* 2020-12-08 Bug fixes
 * 2020-12-05 duplicate id bug
 * 2020-11-27 Bugfixes
 * 2020-11-14 Add feedback form + show question ID on debug site
