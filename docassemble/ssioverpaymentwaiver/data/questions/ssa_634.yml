@@ -42,7 +42,7 @@ fields:
       - Temporary Assistance for Needy Families (TANF): TANF
       - Need-based pension from the Department of Veterans Affairs: VA
       - Social Security: SS
-      - other
+      - Other: other
   - Name of benefits program: receives_benefits_other
     js show if:
       val("benefit_types_received['other']")
