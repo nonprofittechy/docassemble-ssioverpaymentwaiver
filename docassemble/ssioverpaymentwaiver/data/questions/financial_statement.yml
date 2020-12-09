@@ -208,7 +208,11 @@ fields:
 ---
 id: how many dependents  
 question: |
+  % if has_spouse:
   Other than your spouse, how many people live with you who depend on you?
+  % else:
+  How many people live with you who depend on you?
+  % endif
 subquestion: |
   Include minor children or anyone else who lives with you and depends on you
   for support. You do not need to list a roommate.
