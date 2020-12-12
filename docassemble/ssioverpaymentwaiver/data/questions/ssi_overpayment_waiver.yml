@@ -89,6 +89,7 @@ code: |
   if only_change_monthly_due:
     explain_ssa_634
     ssa_634
+    download_pdf
   else:
     explain_ssa_632
 
@@ -1013,12 +1014,22 @@ code: |
   expense_support_details = comma_and_list([item.support_explanation for item in expenses if item.type == "support"])
 ---
 id: download pdf
-question: Here is your document.
 event: download_pdf
+question: |
+  Your document is ready
+subquestion: |
+  1. Download and print 2 copies of the "Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate" document below.
+  1. Keep one copy for your own records.
+  2. Deliver one copy to your local Social Security Administration
+  office.
+attachment code: |
+  ssa_634_template if only_change_monthly_due else ssa_632_template
+---
 attachment:
-  - name: SSA-632
+  - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
     skip undefined: True
+    variable name: ssa_632_template
     pdf template file: ssa-632.pdf
     checkbox export value: "On"
     fields:

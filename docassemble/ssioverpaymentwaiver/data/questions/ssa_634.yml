@@ -20,7 +20,7 @@ code: |
   expect_inheritance
   cannot_convert
 
-  download_634
+  # download_634
   ssa_634 = True
 ---
 id: receives benefits 634
@@ -115,17 +115,20 @@ code: |
     assets.total(period_to_use=12) + \
     client.incomes.total(period_to_use=12, type="other")
 ---
+event: download_634
 need:
   - user_income_total
 comment: |
   RE net earnings, we seem to default to monthly but actually have more options
   Not sure how to handle more than two pensions
 id: download pdf
-question: Here is your document.
-event: download_634
+question: |
+  Here is your document.
+---
 attachment:
-  - name: SSA-634
+  - name: SSA-634 Request for Change in Overpayment Recovery Rate
     filename: SSA-634
+    variable name: ssa_634_template
     pdf template file: ssa-634.pdf
     fields:
       - requestor_name: ${ recordee.name }
