@@ -89,6 +89,9 @@ code: |
   if only_change_monthly_due:
     explain_ssa_634
     ssa_634
+    saw_signature_choice
+    if not (signature_choice == 'paper'):
+      client.signature    
     download_pdf
   else:
     explain_ssa_632
