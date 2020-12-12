@@ -196,18 +196,22 @@ subquestion: |
   You will need to put your Social Security Number on this form. You are the only
   person who can see it before you print and mail or deliver it. We will keep
   your private information safe. 
-  
-  Click help to learn more.
 field: intro_screen
-help: |
-  All information sent to and from this server is encrypted
-  using military-grade security standards.
-  If you create an account on our system, your responses
-  will be encrypted on our server at all times.
-  Only someone with your password will be able to view the contents of your
-  interview. It's important to both keep your password
-  secure and not to lose it, because we will not be able
-  to retrieve your interview without it.
+help:
+  label: |
+    How do you keep my information safe?
+  content: |    
+    All information sent to and from this server is encrypted, using the same
+    technology and strength that keeps your bank information safe.
+    
+    If you create an account on our system, your responses
+    will be encrypted on our server at all times.
+    Only someone with your password will be able to view the contents of your
+    interview. 
+    
+    It's important to both keep your password
+    secure and not to lose it, because we will not be able
+    to retrieve your interview without it.
 ---
 id: who is overpaid
 question: |
@@ -223,6 +227,8 @@ fields:
     datatype: object_radio
     disable others: True
     default: client
+    object labeler: |
+      lambda y: "Me (" + str(y) + ")"
     none of the above: |
       Someone else
     choices: |
@@ -1025,6 +1031,7 @@ subquestion: |
 attachment code: |
   ssa_634_template if only_change_monthly_due else ssa_632_template
 ---
+need: grand_total
 attachment:
   - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
@@ -1108,14 +1115,14 @@ attachment:
       - "dependent_4_age": ${household.item(3).age}
       - "dependent_4_relationship": ${household.item(3).relationship}
       - "cash_amount": ${currency(cash_amount)}
-      - "savings_owner_1": ${savings.item(0).owner}
-      - "savings_amount_1": ${currency(savings.item(0).balance)}
-      - "savings_monthly_1": ${currency(savings.item(0).amount(period_to_use=12))}
-      - "savings_explanation_1": ${savings.item(0).no_income_explanation if savings.item(0).value == 0 else ''}
-      - "savings_owner_2": ${savings.item(1).owner}
-      - "savings_amount_2": ${currency(savings.item(1).balance)}
-      - "savings_monthly_2": ${currency(savings.item(1).amount(period_to_use=12))}
-      - "savings_explanation_2": ${savings.item(1).no_income_explanation if savings.item(1).value == 0 else ''}
+      - "savings_owner_1": ${assets.item(0).owner}
+      - "savings_amount_1": ${currency(assets.matches('savings').item(0).balance)}
+      - "savings_monthly_1": ${currency(assets.matches('savings').item(0).amount(period_to_use=12))}
+      - "savings_explanation_1": ${assets.matches('savings').item(0).no_income_explanation if assets.matches('savings').item(0).value == 0 else ''}
+      - "savings_owner_2": ${assets.matches('savings').item(1).owner}
+      - "savings_amount_2": ${currency(assets.matches('savings').item(1).balance)}
+      - "savings_monthly_2": ${currency(assets.matches('savings').item(1).amount(period_to_use=12))}
+      - "savings_explanation_2": ${assets.matches('savings').item(1).no_income_explanation if assets.matches('savings').item(1).value == 0 else ''}
       - "cd_explanation": ${assets.matches('cd').item(0).no_income_explanation if assets.matches('cd').item(0).value == 0 else ''}
       - "cd_owner": ${comma_and_list(assets.owners(type='cd'))}
       - "cd_amount": ${currency(assets.balance_total(type='cd'))}
@@ -1211,14 +1218,14 @@ attachment:
       - "spouse_ssi_total": ${currency(spouse.incomes.total(period_to_use=12, type='SSI'))}
       - "user_ssi_total": ${currency(client.incomes.total(period_to_use=12, type='SSI'))}
       - "dependent_ssi_total": ${currency(household.incomes.total(period_to_use=12, type='SSI'))}
-      - "pension_type_1": ${client_pensions.item(0).name + spouse_pensions.item(0).name + household_pensions.item(0).name}
-      - "user_pension_1": ${currency(client_pensions.item(0).amount(period_to_use=12))}
-      - "spouse_pension_1": ${currency(spouse_pensions.item(0).amount(period_to_use=12))}
-      - "dependent_pension_1": ${currency(household_pensions.item(0).amount(period_to_use=12))}
-      - "pension_type_2": ${client_pensions.item(1).name.full() + ' ' + spouse_pensions.item(1).name.full() + ' ' +  household_pensions.item(1).name.full()}
-      - "user_pension_2": ${currency(client_pensions.item(1).amount(period_to_use=12))}
-      - "spouse_pension_2": ${currency(spouse_pensions.item(1).amount(period_to_use=12))}
-      - "dependent_pension_2": ${currency(household_pensions.item(1).amount(period_to_use=12))}
+      - "pension_type_1": ${client.incomes.matches('pension').item(0).name + ' ' + spouse.incomes.matches('pension').item(0).name + ' ' + spouse.incomes.matches('pension').item(0).name}
+      - "user_pension_1": ${currency(client.incomes.matches('pension').item(0).amount(period_to_use=12))}
+      - "spouse_pension_1": ${currency(spouse.incomes.matches('pension').item(0).amount(period_to_use=12))}
+      - "dependent_pension_1": ${currency(household.incomes.matches('pension').item(0).amount(period_to_use=12))}
+      - "pension_type_2": ${client.incomes.matches('pension').item(1).name.full() + ' ' + spouse.incomes.matches('pension').item(1).name.full() + ' ' +  household.incomes.matches('pension').item(1).name.full()}
+      - "user_pension_2": ${currency(client.incomes.matches('pension').item(1).amount(period_to_use=12))}
+      - "spouse_pension_2": ${currency(spouse.incomes.matches('pension').item(1).amount(period_to_use=12))}
+      - "dependent_pension_2": ${currency(household.incomes.matches('pension').item(1).amount(period_to_use=12))}
       - "other_assistance_type": ${client.incomes.matches('public assistance').item(0).name + ' ' + spouse.incomes.matches('public assistance').item(0).name + ' ' + household.incomes.matches('public assistance').item(0).name}
       - "user_other_assistance": ${currency(client.incomes.total(type='public assistance',period_to_use=12))}
       - "spouse_other_assistance": ${currency(spouse.incomes.total(type='public assistance',period_to_use=12))}
