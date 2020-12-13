@@ -130,6 +130,7 @@ attachment:
     filename: SSA-634
     variable name: ssa_634_template
     pdf template file: ssa-634.pdf
+    editable: False
     fields:
       - requestor_name: ${ recordee.name }
       - requestor_ssn: ${ recordee.ssn }

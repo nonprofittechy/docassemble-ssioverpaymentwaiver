@@ -1041,7 +1041,8 @@ attachment:
     skip undefined: True
     variable name: ssa_632_template
     pdf template file: ssa-632.pdf
-    checkbox export value: "On"
+    # checkbox export value: "On"
+    editable: False
     fields:
       - "record_owner": ${recordee}
       - "record_ssn": ${recordee.ssn}
