@@ -14,8 +14,8 @@ code: |
   financial_statement_questions
 
   # expenses > income
-  if False:
-    expenses_exceed_income_explanation
+  if expenses_exceed_income:
+      expenses_exceed_income_explanation
 
   expect_inheritance
   cannot_convert
@@ -248,7 +248,7 @@ attachment:
       - user_employed_no: ${ not client.jobs.there_are_any }
       - user_employer_name_address_phone: ${"\n".join([job.name_address_phone() for job in client.jobs])}
       - user_wages_net: ${currency(client.jobs.net_total(period_to_use=12))}
-      - net_earnings_monthly: True
+      - net_earnings_monthly: ${ True if client.jobs.there_are_any else False }
       - user_net_pay_total: ${currency(client.jobs.net_total(period_to_use=12))}
       - user_ss_total: ${ currency(client.incomes.total(type="SSDI", period_to_use=12) + client.incomes.total(type="SSR", period_to_use=12) + client.incomes.total(type="other Social Security benefits", period_to_use=12) )}
       - user_ssi_total: ${ currency(client.incomes.total(type="SSI") )}
@@ -283,8 +283,11 @@ attachment:
       - expenses_total: ${currency(expenses.total(period_to_use=12))}
       - monthly_income: ${ currency( user_income_total) } # ${ currency(client.incomes.total(period_to_use=12) + properties.total(period_to_use=12) + real_e#state.total(period_to_use=12) + assets.total(period_to_use=12) ) }
       - monthly_expenses: ${ currency(expenses.total(period_to_use=12)) } # TODO
-      - total: ${ currency( user_income_total - expenses.total(period_to_use=12) ) }
-      - expenses_exceed_income_explanation: ${ optional("expenses_exceed_income_explanation") }
+      - monthly_total_net: ${ currency( user_income_total - expenses.total(period_to_use=12) ) }
+      - expenses_exceed_income_explanation: |
+          % if expenses_exceed_income:
+          ${ expenses_exceed_income_explanation }
+          % endif
       - expect_inheritance_six_months: ${ expect_inheritance }
       - expect_inheritance_six_months_no: ${ not expect_inheritance } 
       - expect_inheritance_six_months_explanation: ${ optional("expect_inheritance_explanation") }
@@ -294,7 +297,7 @@ attachment:
           % if cannot_convert: 
           ${ cannot_convert_explanation }
           % endif
-      - total_assets: ${ assets.total(period_to_use=12) }
+      - total_assets: ${ int(assets.total(period_to_use=12)) }
       - signature: ${client.signature if defined('client.signature') else ''}
       - signature_date: ${today()}
       - phone_work: ${client.phone_work}
@@ -302,4 +305,5 @@ attachment:
       - user_mailing_address: ${client.address.address}
       - user_city: ${client.address.city}
       - user_state: ${client.address.state}
-      - user_zip: ${ client.address.zip }#
+      - user_zip: ${ client.address.zip }
+      
