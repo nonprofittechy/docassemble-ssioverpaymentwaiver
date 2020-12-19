@@ -497,13 +497,14 @@ fields:
 ---
 id: have overpaid money
 question: |
-  What happened to the overpaid checks or money?
+  Do you currently have any of the money you were overpaid? 
 fields:
-  - Do you currently have any of the money you were overpaid? : possess_overpayment
+  - no label: possess_overpayment
     datatype: yesnoradio
   - How much do you still have?: possess_overpayment_amount
     show if: possess_overpayment
     datatype: currency
+    min: 1
     step: 1
 ---
 id: pay ssa explanation

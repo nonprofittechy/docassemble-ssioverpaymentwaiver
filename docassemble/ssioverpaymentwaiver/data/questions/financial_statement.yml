@@ -427,7 +427,7 @@ fields:
     datatype: yesno
   - Cars, motorcycles, boats or other vehicles other than your family car: vehicles.there_are_any
     help: |
-      Answer yes if someone owns a car, motorcyle, boat or any other vehicle
+      Select if someone in your household owns a car, motorcyle, boat or any other vehicle.
     datatype: yesno
   - Other assets: assets.asset_types
     datatype: checkboxes
