@@ -1,17 +1,17 @@
 def generate_income_list() -> list:
   return [
-    "SSDI",
-    "SSR",
-    "SSI",
-    "other Social Security benefits",
-    "pension",
-    "SNAP",
-    "rent",
-    "room and board",
-    "child support",
-    "alimony",
-    "other support",
-    "other"
+    {"SSDI": "SSDI"},
+    {"SSR": "Social Security Retirement benefits"},
+    {"SSI": "SSI"},
+    {"other Social Security benefits": "Other Social Security benefits"},
+    {"pension": "Pension"},
+    {"SNAP": "SNAP"},
+    {"rent": "Rent"},
+    {"room and board": "Room and board"},
+    {"child support": "Child support"},
+    {"alimony": "Alimony or spousal support"},
+    {"other support": "Other support or contributions from any person or organization"},
+    {"other": "Other"}
   ]
 
 def income_types_map() -> dict:
