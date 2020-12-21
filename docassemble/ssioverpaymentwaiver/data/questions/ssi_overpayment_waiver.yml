@@ -1084,8 +1084,14 @@ attachment:
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tell_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
       - "told_ssa_how": ${ informed_what_said if informed_ssa and informed_orally else '' }
-      - "contacted_ssa_again_yes": ${benefits_did_not_change_followed_up if informed_ssa and not benefits_changed_after_contact else ''}
-      - "contacted_ssa_again_no": ${benefits_did_not_change_followed_up if informed_ssa and not benefits_changed_after_contact else ''}
+      - "contacted_ssa_again_yes": |
+            % if informed_ssa and not benefits_changed_after_contact:
+            ${ benefits_did_not_change_followed_up }
+            % endif
+      - "contacted_ssa_again_no": |
+            % if informed_ssa and not benefits_changed_after_contact:
+            ${ not benefits_did_not_change_followed_up }
+            % endif
       - "overpaid_before_yes": ${noyes(first_overpayment)}
       - "overpaid_before_no": ${yesno(first_overpayment)}
       - "overpaid_before_ssn": ${past_overpayment_ssn if not first_overpayment else ''}
