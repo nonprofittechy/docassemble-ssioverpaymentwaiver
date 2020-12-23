@@ -168,7 +168,7 @@ code: |
   #financial_statement_download_screen
 ---
 code: |
-  has_sellable_assets =   vehicles.there_are_any or real_estate.there_are_any
+  has_sellable_assets = vehicles.there_are_any or real_estate.there_are_any
 ---
 code: |
   if recordee.name.full() == client.name.full() and payment_type['SSI']:
@@ -1008,7 +1008,7 @@ code: |
 ---
 code: |
   if len(cash_assets) > 0:
-    cash_kept_special_purpose = len(accounts_special_purpose.true_values()) > 0
+    cash_kept_special_purpose = len(accounts_special_purpose) > 0
     cash_special_purpose_no_money_on_hand = False
   else:
     cash_kept_special_purpose = False
@@ -1038,6 +1038,7 @@ attachment code: |
 need: 
   - grand_total
   - cash_kept_special_purpose
+  - has_sellable_assets
 attachment:
   - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
