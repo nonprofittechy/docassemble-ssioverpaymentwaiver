@@ -1065,11 +1065,11 @@ attachment:
           ${overpaid_persons.item(7)} ${overpaid_persons.item(7).ssn}      
       - "overpayment_not_my_fault": ${yesno(overpayment_pay_less_reasons.any_true())}
       - "overpayment_cant_afford_full_benefit": ${yesno(overpayment_cant_afford)}
-      - "overpayment_affordable_amount": ${currency(affordable_amount) if overpayment_cant_afford and payment_type.any_true() else ''}
+      - "overpayment_affordable_amount": ${thousands(affordable_amount) if overpayment_cant_afford and payment_type.any_true() else ''}
       - "overpayment_dont_receive_ssi": ${yesno(received_ssi)}
-      - "overpayment_dont_receive_ssi_affordable_amount": ${currency(affordable_amount) if received_ssi else ''}
+      - "overpayment_dont_receive_ssi_affordable_amount": ${thousands(affordable_amount) if received_ssi else ''}
       - "overpayment_receive_ssi": ${yesno(receives_ssi)}
-      - "overpayment_receive_ssi_affordable_amount": ${currency(affordable_amount) if receives_ssi else ''}
+      - "overpayment_receive_ssi_affordable_amount": ${thousands(affordable_amount) if receives_ssi else ''}
       - "rep_received_benefits_no": ${noyes(client_is_rep_payee)}
       - "rep_received_benefits_yes": ${yesno(client_is_rep_payee)}
       - "beneficiary_name": ${beneficiary.name.full() + ' ' + beneficiary.address.block() if client_is_rep_payee else ''}
