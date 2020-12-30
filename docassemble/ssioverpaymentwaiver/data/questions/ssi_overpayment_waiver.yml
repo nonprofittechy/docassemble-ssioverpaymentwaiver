@@ -168,7 +168,7 @@ code: |
   #financial_statement_download_screen
 ---
 code: |
-  has_sellable_assets =   vehicles.there_are_any or real_estate.there_are_any
+  has_sellable_assets = vehicles.there_are_any or real_estate.there_are_any
 ---
 code: |
   if recordee.name.full() == client.name.full() and payment_type['SSI']:
@@ -1035,7 +1035,10 @@ subquestion: |
 attachment code: |
   ssa_634_template if only_change_monthly_due else ssa_632_template
 ---
-need: grand_total
+need: 
+  - grand_total
+  - cash_kept_special_purpose
+  - has_sellable_assets
 attachment:
   - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
@@ -1298,10 +1301,11 @@ attachment:
       - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation if expenses_exceed_income else ''}
       - "financial_situation_will_change_yes": ${yesno(expect_change)}
       - "financial_situation_will_change_no": ${noyes(expect_change)}
+      - "financial_situation_will_change_explanation": ${expect_change_explanation}
       - "cash_special_purpose_no_amount_on_hand": ${yesno(cash_special_purpose_no_money_on_hand)}
       - "cash_special_purpose_money_available": ${noyes(cash_kept_special_purpose)}
       - "cash_special_purpose_money_needed": ${yesno(cash_kept_special_purpose)}
-      - "special_purpose_explanation": ${accounts_special_purpose_explanation if cash_kept_special_purpose else ''}
+      - "special_purpose_explanation": ${accounts_special_purpose_explanation}
       - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if non_cash_assets and assets_cannot_be_converted else ''}
