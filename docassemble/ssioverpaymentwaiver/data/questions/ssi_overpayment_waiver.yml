@@ -815,12 +815,13 @@ fields:
       - Will have a large bill repaid to me
       - Will receive a pay raise
       - Will receive a pay cut
-      - Will pay a major bill (such as house repairs)
+      - Will pay a major bill (such as house repairs): Will pay a major bill
       - Other financial change for the better
       - Other financial change for the worse
   - Explain: expect_change_explanation
     datatype: area
-    required: False
+    js show if: |
+      val("expect_change['Will receive a large tax refund']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will have a large bill repaid to me']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will receive a pay cut']") || val("expect_change['Will pay a major bill']") || val("expect_change['Other financial change for the better']") || val("expect_change['Other financial change for the worse']")
 ---
 code: |
   if assets.there_are_any:
@@ -1299,8 +1300,8 @@ attachment:
       - "monthly_expenses": ${currency(monthly_expenses)}
       - "adjusted_expenses": ${currency(adjusted_expenses)}
       - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation if expenses_exceed_income else ''}
-      - "financial_situation_will_change_yes": ${yesno(expect_change)}
-      - "financial_situation_will_change_no": ${noyes(expect_change)}
+      - "financial_situation_will_change_yes": ${expect_change.any_true()}
+      - "financial_situation_will_change_no": ${expect_change.all_false()}
       - "financial_situation_will_change_explanation": ${expect_change_explanation}
       - "cash_special_purpose_no_amount_on_hand": ${yesno(cash_special_purpose_no_money_on_hand)}
       - "cash_special_purpose_money_available": ${noyes(cash_kept_special_purpose)}
