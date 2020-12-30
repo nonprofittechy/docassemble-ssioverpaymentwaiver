@@ -315,6 +315,11 @@ subquestion: |
   to complete form SSA-634.
   
   Form SSA-634 is a little simpler and asks fewer questions.
+  
+  Below is what the first page of form SSA-634 looks like. 
+  
+  ${ SSA_634.show(width='28em') }
+    
 continue button field: explain_ssa_634  
 ---
 id: explain ssa 632
@@ -328,7 +333,15 @@ subquestion: |
   You said you would like the Social Security Administration to change the
   total amount you will pay back. That means we'll complete form SSA-632.
   % endif
+  
+  Below is what the first page of form SSA-632 looks like.
+  
+  ${ SSA_632.show(width='28em') }
 continue button field: explain_ssa_632
+---
+objects:
+  - SSA_634: DAStaticFile.using(filename='SSA_634.png', alt_text='SSA-634')
+  - SSA_632: DAStaticFile.using(filename='SSA_632.png', alt_text='SSA-632')
 ---
 id: exit dont agree overpaid
 decoration: hand-paper
