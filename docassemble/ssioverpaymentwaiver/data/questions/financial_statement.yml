@@ -92,15 +92,15 @@ code: |
 
   if properties.there_are_any:
     review_property
+    
+  if vehicles.there_are_any:
+    review_vehicles
 
   expenses_types
   add_expenses
   expenses.gathered=True
   review_expenses
   expense_other_details
-  
-  if vehicles.there_are_any:
-    review_vehicles
 
   financial_statement_questions = True
 ---

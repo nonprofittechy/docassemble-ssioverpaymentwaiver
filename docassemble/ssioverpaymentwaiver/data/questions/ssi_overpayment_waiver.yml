@@ -340,7 +340,7 @@ subquestion: |
 continue button field: explain_ssa_632
 ---
 objects:
-  - explain_ssa_634: DAStaticFile.using(filename='SSA_634.png', alt_text='SSA-634')
+  - SSA_634: DAStaticFile.using(filename='SSA_634.png', alt_text='SSA-634')
   - SSA_632: DAStaticFile.using(filename='SSA_632.png', alt_text='SSA-632')
 ---
 id: exit dont agree overpaid
@@ -756,6 +756,7 @@ fields:
       is: False
   - Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason}?: informed_orally
     datatype: yesnoradio
+    show if: informed_ssa
   - Who did you talk to?: who_spokewith
     show if: informed_orally
   - What did you say?: informed_what_said 
@@ -1100,7 +1101,12 @@ attachment:
       - "told_ssa_yes": ${yesno(informed_ssa)}
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tell_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
-      - "told_ssa_how": ${ informed_what_said if informed_ssa and informed_orally else '' }
+      - "told_ssa_how": |
+            % if informed_ssa and informed_orally: 
+            ${ who_spokewith + informed_what_said }
+            % elif informed_ssa and not informed_orally:
+            ${ how_when_where }
+            % endif
       - "contacted_ssa_again_yes": |
             % if informed_ssa and not benefits_changed_after_contact:
             ${ benefits_did_not_change_followed_up }
@@ -1286,8 +1292,14 @@ attachment:
       - "spouse_other_total": ${currency(spouse.incomes.total(type='other',period_to_use=12))}
       - "dependent_other_total": ${currency(household.incomes.total(type='other',period_to_use=12))}
       - "user_income_total": ${thousands(client.incomes.total(period_to_use=12) + assets.total(owner=client,period_to_use=12) + client.jobs.total(period_to_use=12))}
-      - "spouse_income_total": ${thousands(spouse.incomes.total(period_to_use=12) + assets.total(owner=spouse,period_to_use=12) + spouse.jobs.total(period_to_use=12))}
-      - "dependent_income_total": ${thousands(household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12))}
+      - "spouse_income_total": | 
+          % if has_spouse: 
+          {thousands(spouse.incomes.total(period_to_use=12) + assets.total(owner=spouse,period_to_use=12) + spouse.jobs.total(period_to_use=12))}
+          % endif$
+      - "dependent_income_total": | 
+          % if household.there_are_any: 
+          ${thousands(household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12))}
+          % endif
       - "grand_total": ${thousands(grand_total)}
       - "remarks": ${room_and_board_explanation}
       #- "other_explanation": something # not used
