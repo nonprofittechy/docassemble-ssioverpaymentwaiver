@@ -436,6 +436,7 @@ fields:
     exclude: |
       ['real estate','vehicle']      
 ---
+if: only_change_monthly_due
 id: expenses types
 question: |
   What kind of expenses do you have?
@@ -444,6 +445,16 @@ fields:
     datatype: checkboxes
     code: |
       expense_types().keys()      
+---
+if: not only_change_monthly_due
+id: expenses types
+question: |
+  What kind of expenses do you have?
+fields:
+  - no label: expenses_types
+    datatype: checkboxes
+    code: |
+      expense_type_list()     
 ---
 code: |
   if expenses_types.any_true():
@@ -471,12 +482,22 @@ fields:
     code: |
       period_list()
 ---
+#TODO: Is this used?
 id: expense information prefilled
 question: |
+  % if only_change_monthly_due:
   How much do you spend on '${(expense_types()[expenses[i].type])}'?
+  % else:
+  How much do you spend on '${(expense_type_list()[expenses[i].type])}'?
+  % endif
 subquestion: |
+  % if only_change_monthly_due:
   If you have more than one '${(expense_types()[expenses[i].type])}'
   expense in your household, you'll have a chance to add another later on.
+  % else:
+  If you have more than one '${(expense_type_list()[expenses[i].type])}'
+  expense in your household, you'll have a chance to add another later on.
+  % endif
 fields:
   - Amount: expenses[i].value
     datatype: currency
@@ -810,11 +831,25 @@ if: |
 comment: |
   expenses
 question: |
-  Amount spent on ${expense_types()[expenses[i].type]}
+  % if only_change_monthly_due:
+  How much do you spend on '${(expense_types()[expenses[i].type])}'?
+  % else:
+  How much do you spend on '${(expense_type_list()[expenses[i].type])}'?
+  % endif
 subquestion: |
-  List the amount you spend on ${expense_types()[expenses[i].type]}. If you
-  have more than one expense for ${expense_types()[expenses[i].type]}, you can
-  add another later.
+  % if only_change_monthly_due:
+  If you have more than one '${(expense_types()[expenses[i].type])}'
+  expense in your household, you'll have a chance to add another later on.
+  % else:
+  If you have more than one '${(expense_type_list()[expenses[i].type])}'
+  expense in your household, you'll have a chance to add another later on.
+  % endif
+#question: |
+#  Amount spent on ${expense_types()[expenses[i].type]}
+#subquestion: |
+#  List the amount you spend on ${expense_types()[expenses[i].type]}. If you
+#  have more than one expense for ${expense_types()[expenses[i].type]}, you can
+#  add another later.
 fields:
   - Amount: expenses[i].value
     datatype: currency
@@ -1092,6 +1127,7 @@ columns:
   - Monthly Rental Income: |
       currency(row_item.amount(period_to_use=12))
 ---
+if: only_change_monthly_due
 table: expenses.table
 rows: expenses
 columns:
@@ -1102,11 +1138,32 @@ columns:
 edit:
   - type
 ---
+if: only_change_monthly_due
 table: expenses.display_table
 rows: list(expense_types().keys())
 columns:
   - Type: |
       expense_types()[row_item]
+  - Amount/month: |
+      currency(expenses.total(type=row_item,period_to_use=12))
+---
+if: not only_change_monthly_due
+table: expenses.table
+rows: expenses
+columns:
+  - Type: |
+      expense_type_list()[row_item.type] if not hasattr(row_item, 'utility_kind') or not row_item.utility_kind else expense_type_list()[row_item.type] + ' (' + row_item.utility_kind + ')'
+  - Amount/month: |
+      currency(row_item.amount(period_to_use=12))
+edit:
+  - type
+---
+if: not only_change_monthly_due
+table: expenses.display_table
+rows: list(expense_type_list().keys())
+columns:
+  - Type: |
+      expense_type_list()[row_item]
   - Amount/month: |
       currency(expenses.total(type=row_item,period_to_use=12))
 ---

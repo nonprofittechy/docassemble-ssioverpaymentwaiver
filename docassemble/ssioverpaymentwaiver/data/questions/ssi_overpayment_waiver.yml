@@ -340,7 +340,7 @@ subquestion: |
 continue button field: explain_ssa_632
 ---
 objects:
-  - SSA_634: DAStaticFile.using(filename='SSA_634.png', alt_text='SSA-634')
+  - explain_ssa_634: DAStaticFile.using(filename='SSA_634.png', alt_text='SSA-634')
   - SSA_632: DAStaticFile.using(filename='SSA_632.png', alt_text='SSA-632')
 ---
 id: exit dont agree overpaid
@@ -1274,8 +1274,14 @@ attachment:
       - "spouse_other_support_total": ${currency(spouse.incomes.total(type='other support',period_to_use=12))}
       - "dependent_other_support_total": ${currency(household.incomes.total(type='other support',period_to_use=12))}
       - "user_asset_income_total": ${currency(assets.total(owner=client,period_to_use=12))}
-      - "spouse_asset_income_total": ${currency(assets.total(owner=spouse,period_to_use=12))}
-      - "dependent_asset_income_total": ${currency(assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12))}
+      - "spouse_asset_income_total": | 
+          % if has_spouse: 
+          ${currency(assets.total(owner=spouse,period_to_use=12))}
+          % endif
+      - "dependent_asset_income_total": | 
+          % if household.there_are_any: 
+          ${currency(assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12))}
+          % endif
       - "user_other_total": ${currency(client.incomes.total(type='other',period_to_use=12))}
       - "spouse_other_total": ${currency(spouse.incomes.total(type='other',period_to_use=12))}
       - "dependent_other_total": ${currency(household.incomes.total(type='other',period_to_use=12))}
@@ -1285,7 +1291,7 @@ attachment:
       - "grand_total": ${thousands(grand_total)}
       - "remarks": ${room_and_board_explanation}
       #- "other_explanation": something # not used
-      - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12))}
+      - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12) + expenses.total(type='mortgage',period_to_use=12))}
       - "expense_food": ${currency(expenses.total(type='food',period_to_use=12))}
       - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12))}
       - "expense_fuel": ${currency(expenses.total(type='fuel',period_to_use=12))}
