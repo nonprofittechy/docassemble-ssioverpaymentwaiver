@@ -730,7 +730,7 @@ id: overpayment fault
 question: |
   Why was the overpayment not your fault?
 subquestion: |
-  % if overpayment_reason == 'dont_know' or 'something_else':
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
   Explain why the overpayment wasn't your fault.
   Answer "I don't know" if that is the best answer.
   % else:
