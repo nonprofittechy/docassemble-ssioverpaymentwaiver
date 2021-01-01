@@ -713,26 +713,31 @@ subquestion: |
   says you were overpaid?
 field: overpayment_reason
 choices:
-  - ${recordee} had too much money in a bank account
-  - ${recordee} worked too many hours
-  - ${recordee} went out of the country for more than 30 days
-  - Something else
-  - I don't know
+  - ${recordee} had too much money in a bank account: money_in_bank
+  - ${recordee} worked too many hours: worked_many_hours
+  - ${recordee} went out of the country for more than 30 days: out_of_country
+  - Something else: something_else
+  - I don't know: dont_know
 ---
 id: overpayment explanation
 question: |
   Why did the overpayment happen?
 fields:
-  - Use your own words to explain how the overpayment happened.: overpayment_explanation
+  - Explain how the overpayment happened.: overpayment_explanation
     datatype: area
 ---
 id: overpayment fault
 question: |
   Why was the overpayment not your fault?
 subquestion: |
-  Earlier you said that SSA believes the overpayment happened because ${overpayment_reason}.
-  Use your own words to explain why the overpayment wasn't your fault. Answer
-  "I don't know" if that is the best answer.
+  % if overpayment_reason == 'dont_know' or 'something_else':
+  Explain why the overpayment wasn't your fault.
+  Answer "I don't know" if that is the best answer.
+  % else:
+  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason}.
+  Explain why the overpayment wasn't your fault. 
+  Answer "I don't know" if that is the best answer.
+  % endif
 fields:
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
     datatype: area
