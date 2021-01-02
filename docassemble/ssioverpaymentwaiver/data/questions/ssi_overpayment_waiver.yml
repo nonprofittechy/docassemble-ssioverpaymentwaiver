@@ -715,7 +715,7 @@ fields:
   - no label: overpayment_reason
     input type: radio
     code: |
-      overpayment_reason_choices
+      overpayment_reason_choices.keys()
 ---
 variable name: overpayment_reason_choices
 use objects: True
