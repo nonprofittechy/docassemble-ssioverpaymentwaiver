@@ -718,7 +718,6 @@ fields:
       overpayment_reason_choices.keys()
 ---
 variable name: overpayment_reason_choices
-use objects: True
 data:
   money_in_bank: ${recordee} had too much money in a bank account
   worked_many_hours: ${recordee} worked too many hours
