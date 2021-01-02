@@ -711,13 +711,20 @@ subquestion: |
   Look at the letter the Social Security Administration sent you.
   What reason is the best match for why the Social Security Administration
   says you were overpaid?
-field: overpayment_reason
-choices:
-  - ${recordee} had too much money in a bank account: money_in_bank
-  - ${recordee} worked too many hours: worked_many_hours
-  - ${recordee} went out of the country for more than 30 days: out_of_country
-  - Something else: something_else
-  - I don't know: dont_know
+fields:
+  - no label: overpayment_reason
+    input type: radio
+    code: |
+      overpayment_reason_choices
+---
+variable name: overpayment_reason_choices
+use objects: True
+data:
+  money_in_bank: ${recordee} had too much money in a bank account
+  worked_many_hours: ${recordee} worked too many hours
+  out_of_country: ${recordee} went out of the country for more than 30 days
+  something_else: Something else
+  dont_know: I don't know
 ---
 id: overpayment explanation
 question: |
