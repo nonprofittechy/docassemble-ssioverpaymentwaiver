@@ -348,10 +348,11 @@ decoration: hand-paper
 question: |
   This may not be the right form for you.
 subquestion: |
-  This form is used when you want the Social Security Administration to lower
-  the amount you owe them.
-  If you don't agree with the Social Security that an overpayment happened, you may 
-  want to appeal the overpayment instead. It's a good idea to talk to a lawyer.
+  This form is used when you want the Social Security Administration to waive or reduce the amount you owe them.
+  
+  If you don't agree with the Social Security Administration that an overpayment happened, you may want to appeal the overpayment instead. It's a good idea to talk to a lawyer. For help finding legal aid, visit the [Legal Services Corporation](https://www.lsc.gov/what-legal-aid/find-legal-aid).
+  
+  If you received the letter from the Social Security Administration notifying you of the overpayment more than 65 days ago, it is too late for you to file an appeal. If it is too late for you to file an appeal and you don’t agree that an overpayment happened, you should still proceed by selecting "Keep going" to request the Social Security Administration waive or reduce the amount you owe them.
 buttons:
   - Keep going:
       code: |
