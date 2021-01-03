@@ -384,6 +384,7 @@ question: |
 fields:
   - no label: overpayment_benefits_used_for
     datatype: area
+    maxlength: 86
 ---
 id: beneficiary info
 question: |
@@ -632,11 +633,13 @@ fields:
     datatype: yesnoradio
   - Describe who got the property or cash, what it was and its value: gave_cash_after_notice_explanation
     datatype: area
+    maxlength: 170
     show if: gave_cash_after_notice
   - Did you get or sell any property or get any cash, (other than money you got from working), after the notice of overpayment?: received_cash_after_notice
     datatype: yesnoradio
   - Describe the property and sale price, or amount of cash received: received_cash_after_notice_explanation
     datatype: area
+    maxlength: 170
     show if: received_cash_after_notice
 ---
 id: why cant return overpayment
@@ -651,6 +654,7 @@ subquestion: |
 fields:
   - no label: cant_return_explanation
     datatype: area
+    maxlength: 273
 ---
 id: expenses higher than income
 question: |
@@ -662,6 +666,7 @@ subquestion: |
 fields:
   - no label: expenses_exceed_income_explanation
     datatype: area
+    maxlength: 290
 ---
 id: ability to pay
 question: |
@@ -725,6 +730,7 @@ question: |
 fields:
   - Use your own words to explain how the overpayment happened.: overpayment_explanation
     datatype: area
+    maxlength: 435
 ---
 id: overpayment fault
 question: |
@@ -740,6 +746,7 @@ fields:
     datatype: area
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
+    maxlength: 430
 ---
 id: ssa contact
 question: |
@@ -751,6 +758,7 @@ fields:
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
     datatype: area
+    maxlength: 344
     show if:
       variable: informed_ssa
       is: False
@@ -758,9 +766,11 @@ fields:
     datatype: yesnoradio
     show if: informed_ssa
   - Who did you talk to?: who_spokewith
+    maxlength: 44
     show if: informed_orally
   - What did you say?: informed_what_said 
     datatype: area
+    maxlength: 300
     show if: informed_orally
 ---
 id: ssa contact how
@@ -772,6 +782,7 @@ subquestion: |
 fields:
   - Explain how, when and where you told Social Security that you were being overpaid.: how_when_where
     datatype: area
+    maxlength: 344
 ---
 id: ssa contact followup
 question: |
@@ -803,6 +814,7 @@ fields:
       is: False
   - Why were you overpaid in the past?: past_overpayment_explanation
     datatype: area
+    maxlength: 252
     show if:
       variable: first_overpayment
       is: False
@@ -834,6 +846,7 @@ fields:
       - Other financial change for the worse
   - Explain: expect_change_explanation
     datatype: area
+    maxlength: 174
     js show if: |
       val("expect_change['Will receive a large tax refund']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will have a large bill repaid to me']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will receive a pay cut']") || val("expect_change['Will pay a major bill']") || val("expect_change['Other financial change for the better']") || val("expect_change['Other financial change for the worse']")
 ---
@@ -864,6 +877,7 @@ fields:
   - Explain what the special purpose is: accounts_special_purpose_explanation
     datatype: area        
     required: False
+    maxlength: 174
 ---
 id: convertable noncash assets
 question: |
@@ -882,6 +896,7 @@ fields:
   - Explain why the assets CANNOT be converted to cash: assets_cannot_be_converted_explanation
     datatype: area
     required: False
+    maxlength: 174
 ---
 id: convertable cash assets
 question: |
@@ -902,6 +917,7 @@ fields:
   - Explain why the vehicle or property CANNOT be sold: assets_cannot_be_sold_explanation
     datatype: area
     required: False
+    maxlength: 174
 ---
 id: contact information
 generic object: Individual

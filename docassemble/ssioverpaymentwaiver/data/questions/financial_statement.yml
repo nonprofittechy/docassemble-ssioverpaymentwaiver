@@ -588,6 +588,7 @@ subquestion: |
   you will have a chance to add more later.
 fields: 
   - Please describe the kind or name of pension plan: x.incomes[i].name
+    maxlength: 10
     show if:
       code: |
         x.incomes[i].type ==  "pension"
@@ -628,6 +629,7 @@ fields:
       is: "pension"
   - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
     datatype: area
+    maxlength: 52
     show if:
       variable: x.incomes[i].type
       is: "room and board"
@@ -673,6 +675,7 @@ fields:
   - Interest or other income (enter 0 if you do not receive any income): assets[i].value
     datatype: currency
   - Why don't you have any income from this asset?: assets[i].no_income_explanation
+    maxlength: 21
     show if:
       variable: assets[i].value
       is: 0      
@@ -684,6 +687,7 @@ fields:
       is: 0
   - Explain what kind of asset this is: assets[i].other_type
     datatype: area
+    maxlength: 21
     show if:
       code: |
         assets[i].type == "other"
@@ -708,6 +712,7 @@ fields:
     exclude: |
       ['real estate','vehicle']      
   - Explain what type of asset this is: assets[i].other_type
+    maxlength: 21
     show if:
       variable: assets[i].type
       is: 'other'     
@@ -720,6 +725,7 @@ fields:
   - Interest or other Income (enter 0 if you do not receive any income from this asset): assets[i].value
     datatype: currency
   - Why don't you have any income from this asset?: assets[i].no_income_explanation
+    maxlength: 21
     show if:
       variable: assets[i].value
       is: 0
@@ -746,12 +752,15 @@ fields:
     choices: everyone
   - Year: vehicles[i].year
     input type: combobox
+    maxlength: 4
     code: |
       recent_years()
   - Make: vehicles[i].make
-    hint: e.g, Ford, Honda 
+    hint: e.g, Ford, Honda
+    maxlength: 6
   - Model: vehicles[i].model
     hint: e.g., Fusion, Civic
+    maxlength: 7
   - Current value: vehicles[i].value
     datatype: currency
   - Loan balance: vehicles[i].balance    
@@ -759,6 +768,7 @@ fields:
     required: False
   - Main purpose for use (type or select one of these choices): vehicles[i].primary_purpose
     input type: combobox
+    maxlength: 17
     choices: 
       - Recreation
       - Needed for work
@@ -776,6 +786,7 @@ fields:
     none of the above: False
     choices: everyone
   - Description: real_estate[i].description
+    maxlength: 17
   - Market value: real_estate[i].market_value
     datatype: currency
   - Mortgage balance: real_estate[i].balance
@@ -892,6 +903,7 @@ fields:
       period_list()
   - Who are you paying support for, and why?: expenses[i].support_explanation
     datatype: area
+    maxlength: 66
     show if:
       variable: expenses[i].type
       is: "support"      
@@ -904,7 +916,8 @@ subquestion: |
 fields:
   - Write down any explanation you want to give about a large or unusual expense: expense_other_details
     datatype: area
-    required: False  
+    required: False
+    maxlength: 540
 ---
 generic object: Individual
 table: x.incomes.table
