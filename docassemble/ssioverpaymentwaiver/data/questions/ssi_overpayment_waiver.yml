@@ -712,28 +712,39 @@ subquestion: |
   Look at the letter the Social Security Administration sent you.
   What reason is the best match for why the Social Security Administration
   says you were overpaid?
-field: overpayment_reason
-choices:
-  - ${recordee} had too much money in a bank account
-  - ${recordee} worked too many hours
-  - ${recordee} went out of the country for more than 30 days
-  - Something else
-  - I don't know
+fields:
+  - no label: overpayment_reason
+    input type: radio
+    code: |
+      overpayment_reason_choices
+---
+variable name: overpayment_reason_choices
+data:
+  money_in_bank: ${recordee} had too much money in a bank account
+  worked_many_hours: ${recordee} worked too many hours
+  out_of_country: ${recordee} went out of the country for more than 30 days
+  something_else: Something else
+  dont_know: I don't know
 ---
 id: overpayment explanation
 question: |
   Why did the overpayment happen?
 fields:
-  - Use your own words to explain how the overpayment happened.: overpayment_explanation
+  - Explain how the overpayment happened.: overpayment_explanation
     datatype: area
 ---
 id: overpayment fault
 question: |
   Why was the overpayment not your fault?
 subquestion: |
-  Earlier you said that SSA believes the overpayment happened because ${overpayment_reason}.
-  Use your own words to explain why the overpayment wasn't your fault. Answer
-  "I don't know" if that is the best answer.
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+  Explain why the overpayment wasn't your fault.
+  Answer "I don't know" if that is the best answer.
+  % else:
+  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_choices.get(overpayment_reason)}.
+  Explain why the overpayment wasn't your fault. 
+  Answer "I don't know" if that is the best answer.
+  % endif
 fields:
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
     datatype: area
@@ -746,16 +757,32 @@ id: ssa contact
 question: |
   Contact with Social Security Administration
 subquestion: |
-  You said that the reason for the overpayment was "${overpayment_reason}"
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+
+  % else:
+  You said that the reason for the overpayment was that ${overpayment_reason_choices.get(overpayment_reason)}.
+  % endif
 fields:
-  - Did you tell the Social Security Administration that ${overpayment_reason}?: informed_ssa
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      Did you tell the Social Security Administration about the change or event that made you overpaid?
+      % else:
+      Did you tell the Social Security Administration that ${overpayment_reason_choices.get(overpayment_reason)}?
+      % endif
+    field: informed_ssa
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
     datatype: area
     show if:
       variable: informed_ssa
       is: False
-  - Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason}?: informed_orally
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      Did you talk to someone (by phone or in person) about the change or event that made you overpaid?
+      % else:
+      Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason_choices.get(overpayment_reason)}?
+      % endif
+    field: informed_orally
     datatype: yesnoradio
     show if: informed_ssa
   - Who did you talk to?: who_spokewith
@@ -766,25 +793,32 @@ fields:
 ---
 id: ssa contact how
 question: |
-  How did you talk to Social Security?
+  How did you talk to the Social Security Administration?
 subquestion: |
-  You said that you told Social Security about the overpayment, but it wasn't by 
-  phone or in person.
+  You said that you told Social Security about the overpayment, but it wasn't by phone or in person.
 fields:
-  - Explain how, when and where you told Social Security that you were being overpaid.: how_when_where
+  - Explain how, when and where you told the Social Security Administration that you were being overpaid.: how_when_where
     datatype: area
 ---
 id: ssa contact followup
 question: |
   Follow-up
 subquestion: |
-  You said that you contacted the Social Security Administration
-  to let them know that ${overpayment_reason}.
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+  You said that you contacted the Social Security Administration to let them know that you were overpaid.
+  % else:
+  You said that you contacted the Social Security Administration to let them know that ${overpayment_reason_choices.get(overpayment_reason)}.
+  % endif
 fields:
-  - After you reported that ${overpayment_reason}, did the Social Security Administration change your benefits amount?: benefits_changed_after_contact
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      After you reported the overpayment, did the Social Security Administration change your benefits amount?
+      % else:
+      After you reported that ${overpayment_reason_choices.get(overpayment_reason)}, did the Social Security Administration change your benefits amount?
+      % endif
+    field: benefits_changed_after_contact
     datatype: yesnoradio
-    
-  - Did you try to let them know about the overpayment more than once?: benefits_did_not_change_followed_up
+  - Did you try to let the Social Security Administration know about the overpayment more than once?: benefits_did_not_change_followed_up
     datatype: yesnoradio
     show if:  
       variable: benefits_changed_after_contact
@@ -807,12 +841,11 @@ fields:
     show if:
       variable: first_overpayment
       is: False
-  - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it happening again.: past_overpayment_similar_explanation
+  - If the reason is similar to the reason you were overpaid this time, explain what you did to prevent it happening again.: past_overpayment_similar_explanation
     datatype: area
     show if:
       variable: first_overpayment
-      is: False
-      
+      is: False 
 ---
 id: expected financial changes
 comment: |
