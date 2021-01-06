@@ -964,7 +964,6 @@ subquestion: |
 fields:
   - Where do you want to sign?: signature_choice
     input type: radio
-    default: phone
     choices:
       - Sign on this device: this device
       - Sign on paper after I print the forms: paper
@@ -981,13 +980,13 @@ fields:
       ${interview_url_as_qr()}
       </center>
 
-    show if: 
-      code: |
-        device().is_pc    
+    show if:
+      variable: signature_choice
+      is: phone 
   - Or, text me a link at this phone number: link_cell
-    show if: 
-      code: |
-        device().is_pc        
+    show if:
+      variable: signature_choice
+      is: phone       
     required: false
   - note: |
       Once this screen has loaded on your mobile device, click continue.
@@ -999,7 +998,6 @@ help: |
   Many smartphones will automatically find the link on this screen. The link
   may "float" up from the screen into a small icon you can click.
   If your phone does not do this, use the text option instead.
-  
 ---
 id: sign on phone
 question: Sign on your phone
@@ -1009,7 +1007,6 @@ subquestion: |
   % else:
   Click continue on this screen when you're ready to sign.
   % endif
-  
 field: signature_wait_screen  
 ---
 id: signature
