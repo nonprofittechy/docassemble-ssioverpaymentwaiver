@@ -74,6 +74,10 @@ code: |
   else:
     client_is_rep_payee = False
   
+  if relationship_to_overpaid == 'representative payee':
+    client_is_rep_payee = True
+    someone_else_lived_with_user
+  
   beneficiary.name.first
   
   if has_spouse:
@@ -98,9 +102,11 @@ code: |
 
   payment_type
   overpayment_reason
-  overpayment_explanation
-
-  overpayment_benefits_used_for    
+  
+  if not recordee == client:
+    overpayment_explanation
+    overpayment_benefits_used_for   
+  
   overpayment_why_not_at_fault  
   
   if not possess_overpayment:
