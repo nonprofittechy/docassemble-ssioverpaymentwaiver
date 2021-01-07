@@ -160,12 +160,126 @@ code: |
   nav.set_section('Finishing up')
   client.address.address
   
-  saw_signature_choice
-  if not (signature_choice == 'paper'):
-    client.signature
-    
+  run_signature_flow
+  #saw_signature_choice
+  #if not (signature_choice == 'paper'):
+  #  if 
+  #  client.signature
+  
   download_pdf
   #financial_statement_download_screen
+---
+code: |
+  # Keep in own code block so it's only evaluated once
+  started_on_phone = device() and device().is_mobile
+---
+code: |
+  # The phone/email method will only work if
+  # we enforce logins
+  if started_on_phone:
+    saw_signature_choice = True # Don't ask how they want to sign
+    client.signature
+  else: 
+    saw_signature_choice
+    if defined('signature_choice') and signature_choice =='this device':
+      client.signature
+    elif defined('signature_choice') and signature_choice == 'phone':
+      saw_signature_qrcode
+      if defined('link_cell') or defined('link_email'):
+        if defined('link_cell') and link_cell and task_not_yet_performed('send signature link'):
+          send_sms(task='send signature link', to=link_cell,template=interview_link)
+        if defined('link_email') and link_email:
+          send_email(task='send signature link', to=link_email, template=interview_link)
+        signature_wait_screen
+        client.signature
+        if device() and device().is_mobile:
+          signature_phone_followup
+      else:
+        client.signature
+    # Handle situation where someone uses the QR code    
+    if saw_signature_choice and not defined('signature_choice'):
+      client.signature
+      signature_phone_followup
+      signature_choice = 'phone'
+  run_signature_flow = True  
+---
+id: signature wait screen
+question: |
+  % if defined('client.signature'):
+  Thank you for signing
+  % else:
+  Add your signature
+  % endif
+subquestion: |
+  % if defined('client.signature'):
+  Click continue.
+  % else:
+  % if device() and device().is_mobile:
+  Click continue on this screen when you're ready to sign.
+  % else:
+  Click continue to sign on this device. Wait here if you
+  sent a link to sign to someone else. Click continue
+  when your signature has been added.
+  % endif
+  % endif
+
+field: signature_wait_screen
+decoration: file-signature
+---
+id: signature phone followup
+question: |
+  Continue on the device you started the interview on
+subquestion: |
+  Thank you for signing. You can close this browser on your phone.
+  Keep going on the computer you started the interview on.
+field: signature_phone_followup  
+---
+id: signature-phone
+question: |
+  Sign your forms
+fields:
+  - note: |
+      1. Open the camera app or barcode reader app on your phone.
+      2. Point it at the screen.
+      3. Click the link icon that appears on the camera screen.
+      4. Click ${word("continue")} on your phone.
+      
+      <center>
+      ${interview_url_as_qr()}
+      </center>
+
+    show if: 
+      code: |
+        device() and device().is_pc
+  - Email a link instead: email_link
+    datatype: yesnowide
+    show if: 
+      code: |
+        device() and device().is_pc
+  - Email address: link_email
+    show if: email_link
+  - Text a link instead: text_link
+    datatype: yesnowide
+    show if: 
+      code: |
+        device() and device().is_pc
+  - label: Cell phone number
+    field: link_cell
+    show if: text_link
+    default: ${showifdef('client.phone_number')}
+  - note: |
+      Click ${word("continue")} to add your signature.
+  - note: |
+      Click ${word("continue")} to add your signature.
+    show if: 
+      code: |
+        device() and not device().is_pc
+help: |
+  Many smartphones will automatically find the link on this screen when you use
+  the camera app. The link
+  may "float" up from the screen into a small icon you can click.
+  If your phone does not do this, use the text option instead.
+continue button field: saw_signature_qrcode
 ---
 code: |
   has_sellable_assets = vehicles.there_are_any or real_estate.there_are_any
@@ -956,50 +1070,30 @@ fields:
   - Zip code: x.address.zip
     required: False
 ---
-id: signature method
+id: signature
+decoration: file-signature
 question: |
-  Signature
+  Sign your forms
 subquestion: |
-  Before you mail or deliver this form, you need to sign it.
-fields:
-  - Where do you want to sign?: signature_choice
-    input type: radio
-    default: phone
-    choices:
-      - Sign on this device: this device
-      - Sign on paper after I print the forms: paper
-      - Sign on my phone: phone
-    show if: 
-      code: |
-        device().is_pc      
-  - note: |
-      To sign on your phone, point your phone camera at this barcode and click the 
-      barcode or link icon that appears in the camera view. Click continue on your 
-      phone.
-      
-      <center>
-      ${interview_url_as_qr()}
-      </center>
-
-    show if: 
-      code: |
-        device().is_pc    
-  - Or, text me a link at this phone number: link_cell
-    show if: 
-      code: |
-        device().is_pc        
-    required: false
-  - note: |
-      Once this screen has loaded on your mobile device, click continue.
-    show if: 
-      code: |
-        not device().is_pc            
-continue button field: saw_signature_choice
-help: |
-  Many smartphones will automatically find the link on this screen. The link
-  may "float" up from the screen into a small icon you can click.
-  If your phone does not do this, use the text option instead.
-  
+  We are almost ready to print your forms. You will need to sign them before
+  delivering them. We recommend you sign electronically now, before you print. 
+  You can sign using your computer mouse, or sign on your phone with your finger.
+field: signature_choice
+buttons:  
+  - Sign on a mobile phone: phone
+    image: mobile-alt
+  - Sign on this computer: this device
+    image: desktop
+  - Sign after I print: paper
+    image: print
+script: |
+  <script>
+    $(document).on('daPageLoad', function(){
+      $(".da-field-buttons > div > .btn-da-custom").last().after("<br>")
+      $(".da-field-buttons > div > .btn-da-custom").first().before("<br>")
+    });
+  </script>
+continue button field: saw_signature_choice  
 ---
 id: sign on phone
 question: Sign on your phone
@@ -1011,6 +1105,13 @@ subquestion: |
   % endif
   
 field: signature_wait_screen  
+---
+template: interview_link
+content: |
+  You are being asked to sign a Request for SSI Overpayment Waiver form.
+  Click the link below to add your signature on your phone.
+  
+  ${interview_url()}
 ---
 id: signature
 question: Sign below
