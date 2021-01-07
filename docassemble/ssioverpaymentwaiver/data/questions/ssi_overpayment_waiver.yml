@@ -740,10 +740,12 @@ subquestion: |
   % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
   Explain why the overpayment wasn't your fault.
   Answer "I don't know" if that is the best answer.
+  You can type a total of 460 characters in the spaces provided.
   % else:
   You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_choices.get(overpayment_reason)}.
   Explain why the overpayment wasn't your fault. 
   Answer "I don't know" if that is the best answer.
+  You can type a total of 460 characters in the spaces provided.
   % endif
 fields:
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
@@ -752,6 +754,8 @@ fields:
     datatype: area
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
+validation code: |
+  if len(overpayment_why_not_at_fault) + len(overpayment_why_accepted) + len(overpayment_why_had_right) > 460: validation_error("It's too long.")
 ---
 id: ssa contact
 question: |
@@ -1131,7 +1135,7 @@ attachment:
       - "someone_else_user_received_benefits_no": ${noyes(someone_else_user_received_benefits) if not recordee == client else ''}
       - "someone_else_user_received_benefits_yes": ${yesno(someone_else_user_received_benefits) if not recordee == client else ''}
       - "someone_else_overpayment_explanation": ${ overpayment_explanation if not recordee == client else ''}
-      - "why_thought_entitled": ${overpayment_why_had_right}
+      - "why_thought_entitled": ${ fix_punctuation(overpayment_why_not_at_fault) + ' ' + fix_punctuation(overpayment_why_accepted) + ' ' + fix_punctuation(overpayment_why_had_right) }
       - "told_ssa_yes": ${yesno(informed_ssa)}
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tell_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
