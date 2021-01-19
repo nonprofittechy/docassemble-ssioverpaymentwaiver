@@ -588,21 +588,24 @@ subquestion: |
   you will have a chance to add more later.
 fields: 
   - Please describe the kind or name of pension plan: x.incomes[i].name
-    maxlength: 10
+    maxlength: 9
     show if:
       code: |
         x.incomes[i].type ==  "pension"
   - Explain the source of the room and/or board payments: x.incomes[i].room_board_explanation
     datatype: area
+    maxlength: 26
     show if:
       code: |
         x.incomes[i].type == "room and board"        
   - Source of the other support: x.incomes[i].name
+    maxlength: 25
     show if:
       code: |
         x.incomes[i].type == "other support"
   - Please explain the other sources: x.incomes[i].remarks
     input type: area
+    maxlength: 26
     show if:
       code: |
         x.incomes[i].type == "other"
@@ -768,7 +771,7 @@ fields:
     required: False
   - Main purpose for use (type or select one of these choices): vehicles[i].primary_purpose
     input type: combobox
-    maxlength: 17
+    maxlength: 15
     choices: 
       - Recreation
       - Needed for work
@@ -786,7 +789,7 @@ fields:
     none of the above: False
     choices: everyone
   - Description: real_estate[i].description
-    maxlength: 17
+    maxlength: 14
   - Market value: real_estate[i].market_value
     datatype: currency
   - Mortgage balance: real_estate[i].balance
@@ -821,6 +824,7 @@ fields:
     none of the above: False
     choices: everyone
   - Description: properties[i].description
+    maxlength: 17
   - Market value: properties[i].market_value
     datatype: currency
   - Mortgage balance: properties[i].balance
@@ -875,6 +879,7 @@ fields:
       period_list()
   - Please describe your other expense: expenses[i].explanation
     datatype: area
+    maxlength: 270
     show if:
       code: |
         expenses[i].type == "other"      
@@ -908,6 +913,7 @@ fields:
       variable: expenses[i].type
       is: "support"      
 ---
+id: more expenses info
 question: |
   Optional: tell SSA more about your expenses
 subquestion: |
@@ -917,7 +923,7 @@ fields:
   - Write down any explanation you want to give about a large or unusual expense: expense_other_details
     datatype: area
     required: False
-    maxlength: 540
+    maxlength: 270
 ---
 generic object: Individual
 table: x.incomes.table

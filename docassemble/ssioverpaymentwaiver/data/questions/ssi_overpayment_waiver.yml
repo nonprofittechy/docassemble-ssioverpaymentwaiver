@@ -746,7 +746,6 @@ fields:
     datatype: area
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
-    maxlength: 430
 ---
 id: ssa contact
 question: |
@@ -758,7 +757,7 @@ fields:
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
     datatype: area
-    maxlength: 344
+    maxlength: 285
     show if:
       variable: informed_ssa
       is: False
@@ -814,16 +813,16 @@ fields:
       is: False
   - Why were you overpaid in the past?: past_overpayment_explanation
     datatype: area
-    maxlength: 252
+    maxlength: 125
     show if:
       variable: first_overpayment
       is: False
   - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it happening again.: past_overpayment_similar_explanation
     datatype: area
+    maxlength: 125
     show if:
       variable: first_overpayment
-      is: False
-      
+      is: False    
 ---
 id: expected financial changes
 comment: |
