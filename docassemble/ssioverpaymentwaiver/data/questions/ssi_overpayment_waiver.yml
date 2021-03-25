@@ -26,6 +26,7 @@ include:
   - financial_statement.yml
   #- docassemble.gbls:basic-questions-gbls.yml
   - docassemble.ssa:ssa.yml
+  - docassemble.VLPBranding:vlp_branding.yml  
 ---
 objects:
   - recordee: Individual
@@ -166,6 +167,23 @@ code: |
   #  if 
   #  client.signature
   
+  store_variables_snapshot(data={'zip':client.address.zip,
+    'state':client.address.state,
+    'client_is_rep_payee':client_is_rep_payee,
+    'client_goals':client_goals.true_values(),
+    'agree_overpaid': agree_overpaid,
+    'payment_type':payment_type.true_values(),
+    'overpayment_reason': overpayment_reason,
+    'possess_overpayment': possess_overpayment,
+    'overpayment_pay_less_reasons': overpayment_pay_less_reasons,
+    'informed_ssa':informed_ssa,
+    'expect_change': expect_change.true_values(),
+    'cant_pay_at_all': cant_pay_at_all,
+    'informed_ssa': informed_ssa,
+    'first_overpayment': first_overpayment,
+    'receives_benefits': receives_benefits,
+    'date':today(),
+    })  
   download_pdf
   #financial_statement_download_screen
 ---
