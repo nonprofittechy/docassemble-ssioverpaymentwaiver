@@ -18,7 +18,7 @@ default screen parts:
     Feedback, suggestions, or comments? [Complete this survey](${ interview_url(i=user_info().package + ":feedback.yml", github_repo="docassemble-ssioverpaymentwaiver", github_user='nonprofittechy', variable=user_info().variable, question_id=user_info().question_id, local=False,reset=1)} ){:target="_blank"}.
   pre: |
     % if get_config('debug'):
-    `Page id: ${ user_info().question_id }`
+    `id: ${ user_info().question_id }`
     % endif
 ---
 include:
@@ -35,9 +35,12 @@ objects:
 ---
 modules:
   - docassemble.ssa.ssa
+  - docassemble.ALToolbox.misc
   - .fix_currency
 ---
-
+features:
+  css: docassemble.ALToolbox:collapse_template.css  
+---
 sections:
   - Getting started
   - Who is requesting a waiver?
@@ -318,20 +321,44 @@ id: intro
 question: |
   Social Security Overpayment Waiver or Change
 subquestion: |
-  This interview is for someone who has to pay back money to the Social Security
-  Administration (SSA). This money is called an "overpayment".
+  This website can help you ask the Social Security administration to 
   
-  You can use this interview to ask the SSA to let you pay back less money.
-  You can also ask them to let you have more time to pay them back.
+  1. **lower the amount that must be paid back**, or;
+  1. **change the schedule of payments** for someone who is told that they
+  owe the Social Security Administration money.
   
-  You might need to tell the SSA a lot about how you and people who depend on you
-  earn and spend money. You should get your bank statements, utility bills, and 
-  any pay stubs ready before you start.
+  ${ collapse_template(overpayment_waiver_help_template) }
+
+  #### Before you get started
+
+  Use this website if you agree that you owe the Social Security
+  Administration. If you do not agree, you should file an 
+  [appeal](https://secure.ssa.gov/iApplNMD/start) instead.
   
-  You will need to put your Social Security Number on this form. You are the only
-  person who can see it before you print and mail or deliver it. We will keep
-  your private information safe. 
-field: intro_screen
+  ${ collapse_template(appeal_help_template) }
+  
+  Before you start, you should find:
+  
+  1. The notice from Social Security that says that you owe money.
+  1. Information about the money that you get each month, and the money that
+  people who live with you get.
+  1. Find out if you get SSI, SSDI, or both.
+  1. Information about how you save and spend money, such as bank statements
+  and bills.
+  
+  This form will also ask for your Social Security number. We keep your
+  information safe. Click below to learn more.
+fields: 
+  - Before you start you must accept the [terms of use](https://www.gbls.org/self-help/eviction/terms-of-use): intro_screen
+    datatype: checkboxes
+    minlength: 1
+    validation messages:
+      minlength: |
+        You must accept the terms of use to continue.
+    choices:
+      - I accept the terms of use: i_accept
+under: |
+  _This website is not giving you legal advice. If you need legal advice, consult a lawyer._
 help:
   label: |
     How do you keep my information safe?
@@ -347,6 +374,33 @@ help:
     It's important to both keep your password
     secure and not to lose it, because we will not be able
     to retrieve your interview without it.
+---
+template: overpayment_waiver_help_template
+subject: |
+  More information about an overpayment waiver
+content: |
+  When Social Security says that you have an overpayment they are saying that you got more SSI or SSDI than you should have gotten under their rules. The reason Social Security says you have an overpayment is in the Notice of Overpayment. 
+  
+  If you agree with Social Security that you have an overpayment but you believe it wasn’t your fault and you can’t afford to pay it back you can ask Social Security for a Waiver. A Waiver means that you don’t have to pay back the overpayment. This interview is to help you fill out a form to ask for a Waiver of the overpayment.
+---
+template: appeal_help_template
+subject: |
+  More information about appeals
+content: |
+  If you do NOT agree with Social Security that you have an overpayment or if you do not understand the reasons Social Security said you have an overpayment, you can file an appeal of the overpayment. The appeal is called a Request for Reconsideration.  
+  
+  The deadline for filing the appeal is 60 days from the date you got your overpayment notice from Social Security. You must act quickly if you want to appeal. 
+  
+  If you got an overpayment notice after going back to work while you were on SSI or SSDI, you may be able to get legal advice from the Disability Law Center. Call them at ${tel("617-723-8455") } or ${ tel("1-800-872-9992") }. They may be able to help you decide if you should file an appeal or a waiver. 
+  
+  You can [start your appeal online](https://secure.ssa.gov/iApplNMD/start) or by filling out the [Request for Reconsideration form](https://www.ssa.gov/forms/ssa-561-u2.pdf) and sending it to your [local Social Security office](https://www.ssa.gov/open/data/FO-RS-Address-Open-Close-Time-App-Devs.html).
+
+  Learn more:
+  
+  * [https://www.illinoislegalaid.org/legal-information/ssi-and-ssdi-overpayments-and-appeals](https://www.illinoislegalaid.org/legal-information/ssi-and-ssdi-overpayments-and-appeals)
+  * [https://www.masslegalservices.org/content/ssi-overpayment-booklet](https://www.masslegalservices.org/content/ssi-overpayment-booklet)
+  * [https://www.masslegalservices.org/content/ssdi-overpayment-booklet](https://www.masslegalservices.org/content/ssdi-overpayment-booklet)
+
 ---
 id: who is overpaid
 question: |
