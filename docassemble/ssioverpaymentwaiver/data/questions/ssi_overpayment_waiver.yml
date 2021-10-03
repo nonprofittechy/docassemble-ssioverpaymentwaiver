@@ -36,7 +36,7 @@ objects:
   - officelist: FieldOfficeList
 ---
 modules:
-  - docassemble.ssa.ssa
+  - .ssa
   - docassemble.ALToolbox.misc
   - .fix_currency
 ---
@@ -912,13 +912,23 @@ fields:
     code: |
       overpayment_reason_choices
 ---
+if: |
+  payment_type['other'] and not payment_type['SSI']
 variable name: overpayment_reason_choices
 data:
-  money_in_bank: ${recordee} had too much money in a bank account
-  worked_many_hours: ${recordee} worked too many hours
-  out_of_country: ${recordee} went out of the country for more than 30 days
-  something_else: Something else
-  dont_know: I don't know
+  - out_of_country: ${recordee} went out of the country for more than 30 days
+  - something_else: Something else
+  - dont_know: I don't know
+---
+if: |
+  payment_type['SSI']
+variable name: overpayment_reason_choices
+data:
+  - money_in_bank: ${recordee} had too much money in a bank account
+  - worked_many_hours: ${recordee} worked too many hours
+  - out_of_country: ${recordee} went out of the country for more than 30 days
+  - something_else: Something else
+  - dont_know: I don't know
 ---
 id: overpayment explanation
 question: |
@@ -927,6 +937,11 @@ fields:
   - Explain how the overpayment happened.: overpayment_explanation
     datatype: area
     maxlength: 435
+---
+depends on:
+  - overpayment_reason
+code: |
+  overpayment_reason_plain_text = next(filter(lambda reason: next(iter(reason),'') == overpayment_reason, overpayment_reason_choices),{}).get(overpayment_reason)
 ---
 id: overpayment fault
 question: |
@@ -937,7 +952,7 @@ subquestion: |
   Answer "I don't know" if that is the best answer.
   You can type a total of 460 characters in the spaces provided.
   % else:
-  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_choices.get(overpayment_reason)}.
+  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_plain_text}.
   Explain why the overpayment wasn't your fault. 
   Answer "I don't know" if that is the best answer.
   You can type a total of 460 characters in the spaces provided.
@@ -959,14 +974,14 @@ subquestion: |
   % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
 
   % else:
-  You said that the reason for the overpayment was that ${overpayment_reason_choices.get(overpayment_reason)}.
+  You said that the reason for the overpayment was that ${overpayment_reason_plain_text}.
   % endif
 fields:
   - label: |
       % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
       Did you tell the Social Security Administration about the change or event that made you overpaid?
       % else:
-      Did you tell the Social Security Administration that ${overpayment_reason_choices.get(overpayment_reason)}?
+      Did you tell the Social Security Administration that ${overpayment_reason_plain_text}?
       % endif
     field: informed_ssa
     datatype: yesnoradio
@@ -980,7 +995,7 @@ fields:
       % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
       Did you talk to someone (by phone or in person) about the change or event that made you overpaid?
       % else:
-      Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason_choices.get(overpayment_reason)}?
+      Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason_plain_text}?
       % endif
     field: informed_orally
     datatype: yesnoradio
@@ -1010,14 +1025,14 @@ subquestion: |
   % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
   You said that you contacted the Social Security Administration to let them know that you were overpaid.
   % else:
-  You said that you contacted the Social Security Administration to let them know that ${overpayment_reason_choices.get(overpayment_reason)}.
+  You said that you contacted the Social Security Administration to let them know that ${overpayment_reason_plain_text}.
   % endif
 fields:
   - label: |
       % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
       After you reported the overpayment, did the Social Security Administration change your benefits amount?
       % else:
-      After you reported that ${overpayment_reason_choices.get(overpayment_reason)}, did the Social Security Administration change your benefits amount?
+      After you reported that ${overpayment_reason_plain_text}, did the Social Security Administration change your benefits amount?
       % endif
     field: benefits_changed_after_contact
     datatype: yesnoradio
@@ -1200,8 +1215,10 @@ fields:
 ---
 code: |
   officelist.load_offices(client.address)
-  found_offices = officelist.number() > 0
   officelist.gathered = True
+---
+code: |
+  found_offices = officelist.number() > 0
 ---
 id: signature method
 decoration: file-signature
@@ -1317,6 +1334,11 @@ subquestion: |
   office.
 attachment code: |
   ssa_634_template if only_change_monthly_due else ssa_632_template
+allow emailing: False
+buttons:
+  - Exit: exit
+    url: https://www.ssa.gov/ssi/text-overpay-ussi.htm
+  - Restart: restart
 ---
 need: 
   - grand_total
