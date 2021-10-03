@@ -197,9 +197,8 @@ id: who lives with client
 question: |
   Your household
 subquestion: |
-  The Social Security Administration needs to know about your household
-  and your financial picture to change the amount or time you take to pay
-  them back.
+  Who lives with you? Check all that apply. If you live alone, do not check
+  anything.
 fields:
   - My spouse: has_spouse
     datatype: yesno
