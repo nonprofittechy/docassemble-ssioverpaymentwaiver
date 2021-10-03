@@ -1152,7 +1152,7 @@ attachment:
       - "overpaid_before_yes": ${noyes(first_overpayment)}
       - "overpaid_before_no": ${yesno(first_overpayment)}
       - "overpaid_before_ssn": ${past_overpayment_ssn if not first_overpayment else ''}
-      - "overpaid_before_steps_to_prevent": ${ past_overpayment_explanation if not first_overpayment else ''}
+      - "overpaid_before_steps_to_prevent": ${ fix_punctuation(past_overpayment_explanation) + ' ' + fix_punctuation(past_overpayment_similar_explanation) if not first_overpayment else ''}
       - "possess_money_yes": ${yesno(possess_overpayment)}
       - "possess_money_amount": ${currency(possess_overpayment_amount, decimals=False) if possess_overpayment else ''}
       - "possess_money_no": ${noyes(possess_overpayment)}
