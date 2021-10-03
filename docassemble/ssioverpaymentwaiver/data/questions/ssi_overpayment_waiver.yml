@@ -32,6 +32,8 @@ objects:
   - recordee: Individual
   - overpaid_persons: DAList.using(object_type=Individual,there_is_another=False)
   - beneficiary: Individual
+  - ssa_office: Person
+  - officelist: FieldOfficeList
 ---
 modules:
   - docassemble.ssa.ssa
@@ -163,6 +165,7 @@ code: |
     
   nav.set_section('Finishing up')
   client.address.address
+  ssa_office.name.text
   
   run_signature_flow
   #saw_signature_choice
@@ -1146,7 +1149,45 @@ fields:
   - Zip code: x.address.zip
     required: False
 ---
-id: signature
+id: which office
+question: |
+  What Social Security office do you want to send the letter to?
+subquestion: |
+  % if found_offices:
+  We have found the following offices that are close to your address.
+  
+  ${map_of([office for office in officelist])}
+  % else:
+  You can use the [Office locator](https://secure.ssa.gov/ICON/main.jsp) to find
+  a Social Security Office near you.
+  % endif
+fields:
+  - Social Security Office: ssa_office
+    datatype: object_radio
+    # input type: radio
+    choices: officelist
+    none of the above: True
+    disable others: True
+    object labeler: |
+      lambda y: (y.address.on_one_line())
+  - note: |
+      Choose an office above, or use the [Office locator](https://secure.ssa.gov/ICON/main.jsp)
+    show if: found_offices
+  - Office name: ssa_office.name.text
+  - Address: ssa_office.address.address
+  - Suite: ssa_office.address.unit
+    required: False
+  - City: ssa_office.address.city
+  - State: ssa_office.address.state
+    code: |
+      states_list()
+---
+code: |
+  officelist.load_offices(client.address)
+  found_offices = officelist.number() > 0
+  officelist.gathered = True
+---
+id: signature method
 decoration: file-signature
 question: |
   Sign your forms
