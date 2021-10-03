@@ -18,7 +18,7 @@ default screen parts:
     Feedback, suggestions, or comments? [Complete this survey](${ interview_url(i=user_info().package + ":feedback.yml", github_repo="docassemble-ssioverpaymentwaiver", github_user='nonprofittechy', variable=user_info().variable, question_id=user_info().question_id, local=False,reset=1)} ){:target="_blank"}.
   pre: |
     % if get_config('debug'):
-    `Page id: ${ user_info().question_id }`
+    `id: ${ user_info().question_id }`
     % endif
 ---
 include:
@@ -26,6 +26,7 @@ include:
   - financial_statement.yml
   #- docassemble.gbls:basic-questions-gbls.yml
   - docassemble.ssa:ssa.yml
+  - docassemble.VLPBranding:vlp_branding.yml  
 ---
 objects:
   - recordee: Individual
@@ -36,9 +37,12 @@ objects:
 ---
 modules:
   - docassemble.ssa.ssa
+  - docassemble.ALToolbox.misc
   - .fix_currency
 ---
-
+features:
+  css: docassemble.ALToolbox:collapse_template.css  
+---
 sections:
   - Getting started
   - Who is requesting a waiver?
@@ -163,12 +167,143 @@ code: |
   client.address.address
   ssa_office.name.text
   
-  saw_signature_choice
-  if not (signature_choice == 'paper'):
-    client.signature
-    
+  run_signature_flow
+  #saw_signature_choice
+  #if not (signature_choice == 'paper'):
+  #  if 
+  #  client.signature
+  
+  store_variables_snapshot(data={'zip':client.address.zip,
+    'state':client.address.state,
+    'client_is_rep_payee':client_is_rep_payee,
+    'client_goals':client_goals.true_values(),
+    'agree_overpaid': agree_overpaid,
+    'payment_type':payment_type.true_values(),
+    'overpayment_reason': overpayment_reason,
+    'possess_overpayment': possess_overpayment,
+    'overpayment_pay_less_reasons': overpayment_pay_less_reasons,
+    'informed_ssa':informed_ssa,
+    'expect_change': expect_change.true_values(),
+    'cant_pay_at_all': cant_pay_at_all,
+    'informed_ssa': informed_ssa,
+    'first_overpayment': first_overpayment,
+    'receives_benefits': receives_benefits,
+    'date':today(),
+    })  
   download_pdf
   #financial_statement_download_screen
+---
+code: |
+  # Keep in own code block so it's only evaluated once
+  started_on_phone = device() and device().is_mobile
+---
+code: |
+  # The phone/email method will only work if
+  # we enforce logins
+  if started_on_phone:
+    saw_signature_choice = True # Don't ask how they want to sign
+    client.signature
+  else: 
+    saw_signature_choice
+    if defined('signature_choice') and signature_choice =='this device':
+      client.signature
+    elif defined('signature_choice') and signature_choice == 'phone':
+      saw_signature_qrcode
+      if defined('link_cell') or defined('link_email'):
+        if defined('link_cell') and link_cell and task_not_yet_performed('send signature link'):
+          send_sms(task='send signature link', to=link_cell,template=interview_link)
+        if defined('link_email') and link_email:
+          send_email(task='send signature link', to=link_email, template=interview_link)
+        signature_wait_screen
+        client.signature
+        if device() and device().is_mobile:
+          signature_phone_followup
+      else:
+        client.signature
+    # Handle situation where someone uses the QR code    
+    if saw_signature_choice and not defined('signature_choice'):
+      client.signature
+      signature_phone_followup
+      signature_choice = 'phone'
+  run_signature_flow = True  
+---
+id: signature wait screen
+question: |
+  % if defined('client.signature'):
+  Thank you for signing
+  % else:
+  Add your signature
+  % endif
+subquestion: |
+  % if defined('client.signature'):
+  Click continue.
+  % else:
+  % if device() and device().is_mobile:
+  Click continue on this screen when you're ready to sign.
+  % else:
+  Click continue to sign on this device. Wait here if you
+  sent a link to sign to someone else. Click continue
+  when your signature has been added.
+  % endif
+  % endif
+
+field: signature_wait_screen
+decoration: file-signature
+---
+id: signature phone followup
+question: |
+  Continue on the device you started the interview on
+subquestion: |
+  Thank you for signing. You can close this browser on your phone.
+  Keep going on the computer you started the interview on.
+field: signature_phone_followup  
+---
+id: signature-phone
+question: |
+  Sign your forms
+fields:
+  - note: |
+      1. Open the camera app or barcode reader app on your phone.
+      2. Point it at the screen.
+      3. Click the link icon that appears on the camera screen.
+      4. Click ${word("continue")} on your phone.
+      
+      <center>
+      ${interview_url_as_qr()}
+      </center>
+
+    show if: 
+      code: |
+        device() and device().is_pc
+  - Email a link instead: email_link
+    datatype: yesnowide
+    show if: 
+      code: |
+        device() and device().is_pc
+  - Email address: link_email
+    show if: email_link
+  - Text a link instead: text_link
+    datatype: yesnowide
+    show if: 
+      code: |
+        device() and device().is_pc
+  - label: Cell phone number
+    field: link_cell
+    show if: text_link
+    default: ${showifdef('client.phone_number')}
+  - note: |
+      Click ${word("continue")} to add your signature.
+  - note: |
+      Click ${word("continue")} to add your signature.
+    show if: 
+      code: |
+        device() and not device().is_pc
+help: |
+  Many smartphones will automatically find the link on this screen when you use
+  the camera app. The link
+  may "float" up from the screen into a small icon you can click.
+  If your phone does not do this, use the text option instead.
+continue button field: saw_signature_qrcode
 ---
 code: |
   has_sellable_assets = vehicles.there_are_any or real_estate.there_are_any
@@ -189,20 +324,44 @@ id: intro
 question: |
   Social Security Overpayment Waiver or Change
 subquestion: |
-  This interview is for someone who has to pay back money to the Social Security
-  Administration (SSA). This money is called an "overpayment".
+  This website can help you ask the Social Security administration to 
   
-  You can use this interview to ask the SSA to let you pay back less money.
-  You can also ask them to let you have more time to pay them back.
+  1. **lower the amount that must be paid back**, or;
+  1. **change the schedule of payments** for someone who is told that they
+  owe the Social Security Administration money.
   
-  You might need to tell the SSA a lot about how you and people who depend on you
-  earn and spend money. You should get your bank statements, utility bills, and 
-  any pay stubs ready before you start.
+  ${ collapse_template(overpayment_waiver_help_template) }
+
+  #### Before you get started
+
+  Use this website if you agree that you owe the Social Security
+  Administration. If you do not agree, you should file an 
+  [appeal](https://secure.ssa.gov/iApplNMD/start) instead.
   
-  You will need to put your Social Security Number on this form. You are the only
-  person who can see it before you print and mail or deliver it. We will keep
-  your private information safe. 
-field: intro_screen
+  ${ collapse_template(appeal_help_template) }
+  
+  Before you start, you should find:
+  
+  1. The notice from Social Security that says that you owe money.
+  1. Information about the money that you get each month, and the money that
+  people who live with you get.
+  1. Find out if you get SSI, SSDI, or both.
+  1. Information about how you save and spend money, such as bank statements
+  and bills.
+  
+  This form will also ask for your Social Security number. We keep your
+  information safe. Click below to learn more.
+fields: 
+  - Before you start you must accept the [terms of use](https://www.gbls.org/self-help/eviction/terms-of-use): intro_screen
+    datatype: checkboxes
+    minlength: 1
+    validation messages:
+      minlength: |
+        You must accept the terms of use to continue.
+    choices:
+      - I accept the terms of use: i_accept
+under: |
+  _This website is not giving you legal advice. If you need legal advice, consult a lawyer._
 help:
   label: |
     How do you keep my information safe?
@@ -218,6 +377,33 @@ help:
     It's important to both keep your password
     secure and not to lose it, because we will not be able
     to retrieve your interview without it.
+---
+template: overpayment_waiver_help_template
+subject: |
+  More information about an overpayment waiver
+content: |
+  When Social Security says that you have an overpayment they are saying that you got more SSI or SSDI than you should have gotten under their rules. The reason Social Security says you have an overpayment is in the Notice of Overpayment. 
+  
+  If you agree with Social Security that you have an overpayment but you believe it wasn’t your fault and you can’t afford to pay it back you can ask Social Security for a Waiver. A Waiver means that you don’t have to pay back the overpayment. This interview is to help you fill out a form to ask for a Waiver of the overpayment.
+---
+template: appeal_help_template
+subject: |
+  More information about appeals
+content: |
+  If you do NOT agree with Social Security that you have an overpayment or if you do not understand the reasons Social Security said you have an overpayment, you can file an appeal of the overpayment. The appeal is called a Request for Reconsideration.  
+  
+  The deadline for filing the appeal is 60 days from the date you got your overpayment notice from Social Security. You must act quickly if you want to appeal. 
+  
+  If you got an overpayment notice after going back to work while you were on SSI or SSDI, you may be able to get legal advice from the Disability Law Center. Call them at ${tel("617-723-8455") } or ${ tel("1-800-872-9992") }. They may be able to help you decide if you should file an appeal or a waiver. 
+  
+  You can [start your appeal online](https://secure.ssa.gov/iApplNMD/start) or by filling out the [Request for Reconsideration form](https://www.ssa.gov/forms/ssa-561-u2.pdf) and sending it to your [local Social Security office](https://www.ssa.gov/open/data/FO-RS-Address-Open-Close-Time-App-Devs.html).
+
+  Learn more:
+  
+  * [https://www.illinoislegalaid.org/legal-information/ssi-and-ssdi-overpayments-and-appeals](https://www.illinoislegalaid.org/legal-information/ssi-and-ssdi-overpayments-and-appeals)
+  * [https://www.masslegalservices.org/content/ssi-overpayment-booklet](https://www.masslegalservices.org/content/ssi-overpayment-booklet)
+  * [https://www.masslegalservices.org/content/ssdi-overpayment-booklet](https://www.masslegalservices.org/content/ssdi-overpayment-booklet)
+
 ---
 id: who is overpaid
 question: |
@@ -351,10 +537,11 @@ decoration: hand-paper
 question: |
   This may not be the right form for you.
 subquestion: |
-  This form is used when you want the Social Security Administration to lower
-  the amount you owe them.
-  If you don't agree with the Social Security that an overpayment happened, you may 
-  want to appeal the overpayment instead. It's a good idea to talk to a lawyer.
+  This form is used when you want the Social Security Administration to waive or reduce the amount you owe them.
+  
+  If you don't agree with the Social Security Administration that an overpayment happened, you may want to appeal the overpayment instead. It's a good idea to talk to a lawyer. For help finding legal aid, visit the [Legal Services Corporation](https://www.lsc.gov/what-legal-aid/find-legal-aid).
+  
+  If you received the letter from the Social Security Administration notifying you of the overpayment more than 65 days ago, it is too late for you to file an appeal. If it is too late for you to file an appeal and you don’t agree that an overpayment happened, you should still proceed by selecting "Keep going" to request the Social Security Administration waive or reduce the amount you owe them.
 buttons:
   - Keep going:
       code: |
@@ -527,7 +714,7 @@ id: pay ssa explanation
 question: |
   You will need to pay the Social Security Administration back
 subquestion: |
-  The Social Security administration will ask you to pay back the ${currency(possess_overpayment_amount)}
+  The Social Security administration will ask you to pay back the ${currency(possess_overpayment_amount, decimals=False)}
   that you said you still have from the overpayment. If that is less than the full 
   amount of the overpayment you may still need to pay back more, but you can ask for a 
   payment plan that works for you.
@@ -647,9 +834,9 @@ question: |
   Why can't you return the overpayment any more?
 subquestion: |
   You said that when you got the notice, you still had 
-  ${ currency(possessed_overpayment_at_notice_amount) } from the overpayment.
+  ${ currency(possessed_overpayment_at_notice_amount, decimals=False) } from the overpayment.
   Using your own words, explain to the Social Security Administration 
-  why you do not think you should have to return the ${ currency(possessed_overpayment_at_notice_amount) }
+  why you do not think you should have to return the ${ currency(possessed_overpayment_at_notice_amount, decimals=False) }
   anymore.
 fields:
   - no label: cant_return_explanation
@@ -714,28 +901,41 @@ subquestion: |
   Look at the letter the Social Security Administration sent you.
   What reason is the best match for why the Social Security Administration
   says you were overpaid?
-field: overpayment_reason
-choices:
-  - ${recordee} had too much money in a bank account
-  - ${recordee} worked too many hours
-  - ${recordee} went out of the country for more than 30 days
-  - Something else
-  - I don't know
+fields:
+  - no label: overpayment_reason
+    input type: radio
+    code: |
+      overpayment_reason_choices
+---
+variable name: overpayment_reason_choices
+data:
+  money_in_bank: ${recordee} had too much money in a bank account
+  worked_many_hours: ${recordee} worked too many hours
+  out_of_country: ${recordee} went out of the country for more than 30 days
+  something_else: Something else
+  dont_know: I don't know
 ---
 id: overpayment explanation
 question: |
   Why did the overpayment happen?
 fields:
-  - Use your own words to explain how the overpayment happened.: overpayment_explanation
+  - Explain how the overpayment happened.: overpayment_explanation
     datatype: area
 ---
 id: overpayment fault
 question: |
   Why was the overpayment not your fault?
 subquestion: |
-  Earlier you said that SSA believes the overpayment happened because ${overpayment_reason}.
-  Use your own words to explain why the overpayment wasn't your fault. Answer
-  "I don't know" if that is the best answer.
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+  Explain why the overpayment wasn't your fault.
+  Answer "I don't know" if that is the best answer.
+  You can type a total of 460 characters in the spaces provided.
+  % else:
+  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_choices.get(overpayment_reason)}.
+  Explain why the overpayment wasn't your fault. 
+  Answer "I don't know" if that is the best answer.
+  You can type a total of 460 characters in the spaces provided.
+  % endif
 fields:
   - Why was the overpayment not your fault?: overpayment_why_not_at_fault
     datatype: area
@@ -743,21 +943,39 @@ fields:
     datatype: area
   - Why did you think you had a right to the money?: overpayment_why_had_right
     datatype: area
+validation code: |
+  if len(overpayment_why_not_at_fault) + len(overpayment_why_accepted) + len(overpayment_why_had_right) > 460: validation_error("It's too long.")
 ---
 id: ssa contact
 question: |
   Contact with Social Security Administration
 subquestion: |
-  You said that the reason for the overpayment was "${overpayment_reason}"
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+
+  % else:
+  You said that the reason for the overpayment was that ${overpayment_reason_choices.get(overpayment_reason)}.
+  % endif
 fields:
-  - Did you tell the Social Security Administration that ${overpayment_reason}?: informed_ssa
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      Did you tell the Social Security Administration about the change or event that made you overpaid?
+      % else:
+      Did you tell the Social Security Administration that ${overpayment_reason_choices.get(overpayment_reason)}?
+      % endif
+    field: informed_ssa
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
     datatype: area
     show if:
       variable: informed_ssa
       is: False
-  - Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason}?: informed_orally
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      Did you talk to someone (by phone or in person) about the change or event that made you overpaid?
+      % else:
+      Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason_choices.get(overpayment_reason)}?
+      % endif
+    field: informed_orally
     datatype: yesnoradio
     show if: informed_ssa
   - Who did you talk to?: who_spokewith
@@ -768,25 +986,32 @@ fields:
 ---
 id: ssa contact how
 question: |
-  How did you talk to Social Security?
+  How did you talk to the Social Security Administration?
 subquestion: |
-  You said that you told Social Security about the overpayment, but it wasn't by 
-  phone or in person.
+  You said that you told Social Security about the overpayment, but it wasn't by phone or in person.
 fields:
-  - Explain how, when and where you told Social Security that you were being overpaid.: how_when_where
+  - Explain how, when and where you told the Social Security Administration that you were being overpaid.: how_when_where
     datatype: area
 ---
 id: ssa contact followup
 question: |
   Follow-up
 subquestion: |
-  You said that you contacted the Social Security Administration
-  to let them know that ${overpayment_reason}.
+  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+  You said that you contacted the Social Security Administration to let them know that you were overpaid.
+  % else:
+  You said that you contacted the Social Security Administration to let them know that ${overpayment_reason_choices.get(overpayment_reason)}.
+  % endif
 fields:
-  - After you reported that ${overpayment_reason}, did the Social Security Administration change your benefits amount?: benefits_changed_after_contact
+  - label: |
+      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+      After you reported the overpayment, did the Social Security Administration change your benefits amount?
+      % else:
+      After you reported that ${overpayment_reason_choices.get(overpayment_reason)}, did the Social Security Administration change your benefits amount?
+      % endif
+    field: benefits_changed_after_contact
     datatype: yesnoradio
-    
-  - Did you try to let them know about the overpayment more than once?: benefits_did_not_change_followed_up
+  - Did you try to let the Social Security Administration know about the overpayment more than once?: benefits_did_not_change_followed_up
     datatype: yesnoradio
     show if:  
       variable: benefits_changed_after_contact
@@ -809,12 +1034,11 @@ fields:
     show if:
       variable: first_overpayment
       is: False
-  - If the reason is similar to the reason you were overpaid this time, please explain what you did to prevent it happening again.: past_overpayment_similar_explanation
+  - If the reason is similar to the reason you were overpaid this time, explain what you did to prevent it happening again.: past_overpayment_similar_explanation
     datatype: area
     show if:
       variable: first_overpayment
-      is: False
-      
+      is: False 
 ---
 id: expected financial changes
 comment: |
@@ -863,7 +1087,7 @@ fields:
     datatype: object_checkboxes
     choices: cash_assets
     object labeler: |
-      lambda y: y.type + ':' +' '  + currency(y.balance)
+      lambda y: y.type + ':' +' '  + currency(y.balance, decimals=False)
   - Explain what the special purpose is: accounts_special_purpose_explanation
     datatype: area        
     required: False
@@ -881,7 +1105,7 @@ fields:
     datatype: object_checkboxes
     choices: non_cash_assets
     object labeler: |
-      lambda y: y.type + ':' + ' ' + currency(y.balance)
+      lambda y: y.type + ':' + ' ' + currency(y.balance, decimals=False)
   - Explain why the assets CANNOT be converted to cash: assets_cannot_be_converted_explanation
     datatype: area
     required: False
@@ -964,49 +1188,29 @@ code: |
   officelist.gathered = True
 ---
 id: signature method
+decoration: file-signature
 question: |
-  Signature
+  Sign your forms
 subquestion: |
-  Before you mail or deliver this form, you need to sign it.
-fields:
-  - Where do you want to sign?: signature_choice
-    input type: radio
-    default: phone
-    choices:
-      - Sign on this device: this device
-      - Sign on paper after I print the forms: paper
-      - Sign on my phone: phone
-    show if: 
-      code: |
-        device().is_pc      
-  - note: |
-      To sign on your phone, point your phone camera at this barcode and click the 
-      barcode or link icon that appears in the camera view. Click continue on your 
-      phone.
-      
-      <center>
-      ${interview_url_as_qr()}
-      </center>
-
-    show if: 
-      code: |
-        device().is_pc    
-  - Or, text me a link at this phone number: link_cell
-    show if: 
-      code: |
-        device().is_pc        
-    required: false
-  - note: |
-      Once this screen has loaded on your mobile device, click continue.
-    show if: 
-      code: |
-        not device().is_pc            
-continue button field: saw_signature_choice
-help: |
-  Many smartphones will automatically find the link on this screen. The link
-  may "float" up from the screen into a small icon you can click.
-  If your phone does not do this, use the text option instead.
-  
+  We are almost ready to print your forms. You will need to sign them before
+  delivering them. We recommend you sign electronically now, before you print. 
+  You can sign using your computer mouse, or sign on your phone with your finger.
+field: signature_choice
+buttons:  
+  - Sign on a mobile phone: phone
+    image: mobile-alt
+  - Sign on this computer: this device
+    image: desktop
+  - Sign after I print: paper
+    image: print
+script: |
+  <script>
+    $(document).on('daPageLoad', function(){
+      $(".da-field-buttons > div > .btn-da-custom").last().after("<br>")
+      $(".da-field-buttons > div > .btn-da-custom").first().before("<br>")
+    });
+  </script>
+continue button field: saw_signature_choice  
 ---
 id: sign on phone
 question: Sign on your phone
@@ -1018,6 +1222,13 @@ subquestion: |
   % endif
   
 field: signature_wait_screen  
+---
+template: interview_link
+content: |
+  You are being asked to sign a Request for SSI Overpayment Waiver form.
+  Click the link below to add your signature on your phone.
+  
+  ${interview_url()}
 ---
 id: signature
 question: Sign below
@@ -1138,7 +1349,7 @@ attachment:
       - "someone_else_user_received_benefits_no": ${noyes(someone_else_user_received_benefits) if not recordee == client else ''}
       - "someone_else_user_received_benefits_yes": ${yesno(someone_else_user_received_benefits) if not recordee == client else ''}
       - "someone_else_overpayment_explanation": ${ overpayment_explanation if not recordee == client else ''}
-      - "why_thought_entitled": ${overpayment_why_had_right}
+      - "why_thought_entitled": ${ fix_punctuation(overpayment_why_not_at_fault) + ' ' + fix_punctuation(overpayment_why_accepted) + ' ' + fix_punctuation(overpayment_why_had_right) }
       - "told_ssa_yes": ${yesno(informed_ssa)}
       - "told_ssa_no": ${noyes(informed_ssa)}
       - "why_didnt_tell_ssa": ${ did_not_inform_ssa_explanation if not informed_ssa else '' }
@@ -1159,12 +1370,12 @@ attachment:
       - "overpaid_before_yes": ${noyes(first_overpayment)}
       - "overpaid_before_no": ${yesno(first_overpayment)}
       - "overpaid_before_ssn": ${past_overpayment_ssn if not first_overpayment else ''}
-      - "overpaid_before_steps_to_prevent": ${ past_overpayment_explanation if not first_overpayment else ''}
+      - "overpaid_before_steps_to_prevent": ${ fix_punctuation(past_overpayment_explanation) + ' ' + fix_punctuation(past_overpayment_similar_explanation) if not first_overpayment else ''}
       - "possess_money_yes": ${yesno(possess_overpayment)}
-      - "possess_money_amount": ${currency(possess_overpayment_amount) if possess_overpayment else ''}
+      - "possess_money_amount": ${currency(possess_overpayment_amount, decimals=False) if possess_overpayment else ''}
       - "possess_money_no": ${noyes(possess_overpayment)}
       - "possessed_money_yes": ${yesno(possessed_overpayment_at_notice)}
-      - "possessed_money_amount": ${currency(possessed_overpayment_at_notice_amount) if possessed_overpayment_at_notice else ''}
+      - "possessed_money_amount": ${currency(possessed_overpayment_at_notice_amount, decimals=False) if possessed_overpayment_at_notice else ''}
       - "possessed_money_no": ${noyes(possessed_overpayment_at_notice)}
       - "why_can_keep": ${cant_return_explanation if not possess_overpayment and possessed_overpayment_at_notice else ""}
       - "gave_away_yes": ${yesno(gave_cash_after_notice)}
@@ -1189,7 +1400,7 @@ attachment:
       - "dependent_4": ${household.item(3)}
       - "dependent_4_age": ${household.item(3).age}
       - "dependent_4_relationship": ${household.item(3).relationship}
-      - "cash_amount": ${currency(cash_amount)}
+      - "cash_amount": ${currency(cash_amount, decimals=False)}
       - "savings_owner_1": ${assets.item(0).owner}
       - "savings_amount_1": ${thousands(assets.matches('savings').item(0).balance)}
       - "savings_monthly_1": ${thousands(assets.matches('savings').item(0).amount(period_to_use=12))}
@@ -1248,22 +1459,22 @@ attachment:
       - "real_property_description_1": ${real_estate.item(0).description}
       - "real_property_value_1": ${thousands(real_estate.item(0).market_value)}
       - "real_property_loan_balance_1": ${thousands(real_estate.item(0).balance)}
-      - "real_property_income_1": ${currency(real_estate.item(0).amount(period_to_use=12))}
+      - "real_property_income_1": ${currency(real_estate.item(0).amount(period_to_use=12), decimals=False)}
       - "real_property_owner_2": ${real_estate.item(1).owner}
       - "real_property_description_2": ${real_estate.item(1).description}
       - "real_property_value_2": ${thousands(real_estate.item(1).market_value)}
       - "real_property_loan_balance_2": ${thousands(real_estate.item(2).balance)}
-      - "real_property_income_2": ${currency(real_estate.item(0).amount(period_to_use=12))}
+      - "real_property_income_2": ${currency(real_estate.item(0).amount(period_to_use=12), decimals=False)}
       - "real_property_owner_3": ${real_estate.item(2).owner}
       - "real_property_description_3": ${real_estate.item(2).description}
       - "real_property_value_3": ${thousands(real_estate.item(2).market_value)}
       - "real_property_loan_balance_3": ${thousands(real_estate.item(2).balance)}
-      - "real_property_income_3": ${currency(real_estate.item(2).amount(period_to_use=12))}
+      - "real_property_income_3": ${currency(real_estate.item(2).amount(period_to_use=12), decimals=False)}
       - "real_property_owner_4": ${real_estate.item(3).owner}
       - "real_property_description_4": ${real_estate.item(3).description}
       - "real_property_value_4": ${thousands(real_estate.item(3).market_value)}
       - "real_property_loan_balance_4":  ${thousands(real_estate.item(3).balance)}
-      - "real_property_income_4": ${currency(real_estate.item(3).amount(period_to_use=12))}
+      - "real_property_income_4": ${currency(real_estate.item(3).amount(period_to_use=12), decimals=False)}
       - "user_employed_yes": ${yesno(client.jobs.there_are_any)}
       - "user_employed_no": ${noyes( client.jobs.there_are_any)}
       - "user_wages_gross": ${thousands(client.jobs.total(period_to_use=12))}
@@ -1287,51 +1498,51 @@ attachment:
       - "user_net_pay_total": ${thousands(client.jobs.net_total(period_to_use=12))}
       - "spouse_net_pay_total": ${thousands(spouse.jobs.net_total(period_to_use=12))}
       - "dependent_net_pay_total": ${thousands(household.jobs.net_total(period_to_use=12))}
-      - "user_ss_total": ${currency(client.incomes.total(period_to_use=12, type='SSR'))}
-      - "spouse_ss_total": ${currency(spouse.incomes.total(period_to_use=12, type='SSR'))}
-      - "dependent_ss_total": ${currency(household.incomes.total(period_to_use=12, type='SSR'))}
-      - "spouse_ssi_total": ${currency(spouse.incomes.total(period_to_use=12, type='SSI'))}
-      - "user_ssi_total": ${currency(client.incomes.total(period_to_use=12, type='SSI'))}
-      - "dependent_ssi_total": ${currency(household.incomes.total(period_to_use=12, type='SSI'))}
+      - "user_ss_total": ${currency(client.incomes.total(period_to_use=12, type='SSR'), decimals=False)}
+      - "spouse_ss_total": ${currency(spouse.incomes.total(period_to_use=12, type='SSR'), decimals=False)}
+      - "dependent_ss_total": ${currency(household.incomes.total(period_to_use=12, type='SSR'), decimals=False)}
+      - "spouse_ssi_total": ${currency(spouse.incomes.total(period_to_use=12, type='SSI'), decimals=False)}
+      - "user_ssi_total": ${currency(client.incomes.total(period_to_use=12, type='SSI'), decimals=False)}
+      - "dependent_ssi_total": ${currency(household.incomes.total(period_to_use=12, type='SSI'), decimals=False)}
       - "pension_type_1": ${client.incomes.matches('pension').item(0).name + ' ' + spouse.incomes.matches('pension').item(0).name + ' ' + spouse.incomes.matches('pension').item(0).name}
-      - "user_pension_1": ${currency(client.incomes.matches('pension').item(0).amount(period_to_use=12))}
-      - "spouse_pension_1": ${currency(spouse.incomes.matches('pension').item(0).amount(period_to_use=12))}
-      - "dependent_pension_1": ${currency(household.incomes.matches('pension').item(0).amount(period_to_use=12))}
+      - "user_pension_1": ${currency(client.incomes.matches('pension').item(0).amount(period_to_use=12), decimals=False)}
+      - "spouse_pension_1": ${currency(spouse.incomes.matches('pension').item(0).amount(period_to_use=12), decimals=False)}
+      - "dependent_pension_1": ${currency(household.incomes.matches('pension').item(0).amount(period_to_use=12), decimals=False)}
       - "pension_type_2": ${client.incomes.matches('pension').item(1).name.full() + ' ' + spouse.incomes.matches('pension').item(1).name.full() + ' ' +  household.incomes.matches('pension').item(1).name.full()}
-      - "user_pension_2": ${currency(client.incomes.matches('pension').item(1).amount(period_to_use=12))}
-      - "spouse_pension_2": ${currency(spouse.incomes.matches('pension').item(1).amount(period_to_use=12))}
-      - "dependent_pension_2": ${currency(household.incomes.matches('pension').item(1).amount(period_to_use=12))}
+      - "user_pension_2": ${currency(client.incomes.matches('pension').item(1).amount(period_to_use=12), decimals=False)}
+      - "spouse_pension_2": ${currency(spouse.incomes.matches('pension').item(1).amount(period_to_use=12), decimals=False)}
+      - "dependent_pension_2": ${currency(household.incomes.matches('pension').item(1).amount(period_to_use=12), decimals=False)}
       - "other_assistance_type": ${client.incomes.matches('public assistance').item(0).name + ' ' + spouse.incomes.matches('public assistance').item(0).name + ' ' + household.incomes.matches('public assistance').item(0).name}
-      - "user_other_assistance": ${currency(client.incomes.total(type='public assistance',period_to_use=12))}
-      - "spouse_other_assistance": ${currency(spouse.incomes.total(type='public assistance',period_to_use=12))}
-      - "dependent_other_assistance": ${currency(household.incomes.total(type='public assistance',period_to_use=12))}
-      - "user_snap_total": ${currency(client.incomes.total(type='SNAP',period_to_use=12))}
-      - "spouse_snap_total": ${currency(spouse.incomes.total(type='public assistance',period_to_use=12))}
-      - "dependent_snap_total": ${currency(household.incomes.total(type='public assistance',period_to_use=12))}
-      - "user_rent_income_total": ${currency(client.incomes.total(type='rent',period_to_use=12))}
-      - "spouse_rent_income_total": ${currency(spouse.incomes.total(type='rent',period_to_use=12))}
-      - "dependent_rent_income_total": ${currency(household.incomes.total(type='rent',period_to_use=12))}
-      - "user_room_board_total": ${currency(client.incomes.total(type='room and board',period_to_use=12))}
-      - "spouse_room_board_total": ${currency(spouse.incomes.total(type='room and board',period_to_use=12))}
-      - "dependent_room_board_total": ${currency(household.incomes.total(type='room and board',period_to_use=12))}
-      - "user_child_support_total": ${currency(client.incomes.total(type='child support',period_to_use=12))}
-      - "spouse_child_support_total": ${currency(spouse.incomes.total(type='child support',period_to_use=12))}
-      - "dependent_child_support_total": ${currency(household.incomes.total(type='child support',period_to_use=12))}
-      - "user_other_support_total": ${currency(client.incomes.total(type='other support',period_to_use=12))}
-      - "spouse_other_support_total": ${currency(spouse.incomes.total(type='other support',period_to_use=12))}
-      - "dependent_other_support_total": ${currency(household.incomes.total(type='other support',period_to_use=12))}
-      - "user_asset_income_total": ${currency(assets.total(owner=client,period_to_use=12))}
+      - "user_other_assistance": ${currency(client.incomes.total(type='public assistance',period_to_use=12), decimals=False)}
+      - "spouse_other_assistance": ${currency(spouse.incomes.total(type='public assistance',period_to_use=12), decimals=False)}
+      - "dependent_other_assistance": ${currency(household.incomes.total(type='public assistance',period_to_use=12), decimals=False)}
+      - "user_snap_total": ${currency(client.incomes.total(type='SNAP',period_to_use=12), decimals=False)}
+      - "spouse_snap_total": ${currency(spouse.incomes.total(type='public assistance',period_to_use=12), decimals=False)}
+      - "dependent_snap_total": ${currency(household.incomes.total(type='public assistance',period_to_use=12), decimals=False)}
+      - "user_rent_income_total": ${currency(client.incomes.total(type='rent',period_to_use=12), decimals=False)}
+      - "spouse_rent_income_total": ${currency(spouse.incomes.total(type='rent',period_to_use=12), decimals=False)}
+      - "dependent_rent_income_total": ${currency(household.incomes.total(type='rent',period_to_use=12), decimals=False)}
+      - "user_room_board_total": ${currency(client.incomes.total(type='room and board',period_to_use=12), decimals=False)}
+      - "spouse_room_board_total": ${currency(spouse.incomes.total(type='room and board',period_to_use=12), decimals=False)}
+      - "dependent_room_board_total": ${currency(household.incomes.total(type='room and board',period_to_use=12), decimals=False)}
+      - "user_child_support_total": ${currency(client.incomes.total(type='child support',period_to_use=12), decimals=False)}
+      - "spouse_child_support_total": ${currency(spouse.incomes.total(type='child support',period_to_use=12), decimals=False)}
+      - "dependent_child_support_total": ${currency(household.incomes.total(type='child support',period_to_use=12), decimals=False)}
+      - "user_other_support_total": ${currency(client.incomes.total(type='other support',period_to_use=12), decimals=False)}
+      - "spouse_other_support_total": ${currency(spouse.incomes.total(type='other support',period_to_use=12), decimals=False)}
+      - "dependent_other_support_total": ${currency(household.incomes.total(type='other support',period_to_use=12), decimals=False)}
+      - "user_asset_income_total": ${currency(assets.total(owner=client,period_to_use=12), decimals=False)}
       - "spouse_asset_income_total": | 
           % if has_spouse: 
-          ${currency(assets.total(owner=spouse,period_to_use=12))}
+          ${currency(assets.total(owner=spouse,period_to_use=12), decimals=False)}
           % endif
       - "dependent_asset_income_total": | 
           % if household.there_are_any: 
-          ${currency(assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12))}
+          ${currency(assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12), decimals=False)}
           % endif
-      - "user_other_total": ${currency(client.incomes.total(type='other',period_to_use=12))}
-      - "spouse_other_total": ${currency(spouse.incomes.total(type='other',period_to_use=12))}
-      - "dependent_other_total": ${currency(household.incomes.total(type='other',period_to_use=12))}
+      - "user_other_total": ${currency(client.incomes.total(type='other',period_to_use=12), decimals=False)}
+      - "spouse_other_total": ${currency(spouse.incomes.total(type='other',period_to_use=12), decimals=False)}
+      - "dependent_other_total": ${currency(household.incomes.total(type='other',period_to_use=12), decimals=False)}
       - "user_income_total": ${thousands(client.incomes.total(period_to_use=12) + assets.total(owner=client,period_to_use=12) + client.jobs.total(period_to_use=12))}
       - "spouse_income_total": | 
           % if has_spouse: 
@@ -1344,30 +1555,30 @@ attachment:
       - "grand_total": ${thousands(grand_total)}
       - "remarks": ${room_and_board_explanation}
       #- "other_explanation": something # not used
-      - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12) + expenses.total(type='mortgage',period_to_use=12))}
-      - "expense_food": ${currency(expenses.total(type='food',period_to_use=12))}
-      - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12))}
-      - "expense_fuel": ${currency(expenses.total(type='fuel',period_to_use=12))}
-      - "expense_clothing": ${currency(expenses.total(type='clothing',period_to_use=12))}
-      - "expense_cc_minimum": ${currency(expenses.total(type='credit cards',period_to_use=12))}
-      - "expense_property_tax": ${currency(expenses.total(type='property tax',period_to_use=12))}
-      - "expense_fees": ${currency(expenses.total(type='other taxes',period_to_use=12))}
-      - "expense_insurance_1": ${currency(expenses.matches('insurance').item(0).amount(period_to_use=12))}
-      - "expense_insurance_2": ${currency(expenses.matches('insurance').item(1).amount(period_to_use=12))}
-      - "expense_medical": ${currency(expenses.total(type='medical',period_to_use=12))}
-      - "expense_car": ${currency(expenses.total(type='auto',period_to_use=12))}
-      - "expense_transportation": ${currency(expenses.total(type='transportation',period_to_use=12))}
-      - "expense_charity_1": ${currency(expenses.matches('charity').item(0).amount(period_to_use=12))}
-      - "expense_charity_2": ${currency(expenses.matches('charity').item(1).amount(period_to_use=12))}
-      - "expense_charity_3": ${currency(expenses.matches('charity').item(2).amount(period_to_use=12))}
-      - "expense_loan_1": ${currency(expenses.matches('loan').item(0).amount(period_to_use=12))}
-      - "expense_loan_2": ${currency(expenses.matches('loan').item(1).amount(period_to_use=12))}
-      - "expense_support_1": ${currency(expenses.matches('support').item(0).amount(period_to_use=12))}
+      - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12) + expenses.total(type='mortgage',period_to_use=12), decimals=False)}
+      - "expense_food": ${currency(expenses.total(type='food',period_to_use=12), decimals=False)}
+      - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12), decimals=False)}
+      - "expense_fuel": ${currency(expenses.total(type='fuel',period_to_use=12), decimals=False)}
+      - "expense_clothing": ${currency(expenses.total(type='clothing',period_to_use=12), decimals=False)}
+      - "expense_cc_minimum": ${currency(expenses.total(type='credit cards',period_to_use=12), decimals=False)}
+      - "expense_property_tax": ${currency(expenses.total(type='property tax',period_to_use=12), decimals=False)}
+      - "expense_fees": ${currency(expenses.total(type='other taxes',period_to_use=12), decimals=False)}
+      - "expense_insurance_1": ${currency(expenses.matches('insurance').item(0).amount(period_to_use=12), decimals=False)}
+      - "expense_insurance_2": ${currency(expenses.matches('insurance').item(1).amount(period_to_use=12), decimals=False)}
+      - "expense_medical": ${currency(expenses.total(type='medical',period_to_use=12), decimals=False)}
+      - "expense_car": ${currency(expenses.total(type='auto',period_to_use=12), decimals=False)}
+      - "expense_transportation": ${currency(expenses.total(type='transportation',period_to_use=12), decimals=False)}
+      - "expense_charity_1": ${currency(expenses.matches('charity').item(0).amount(period_to_use=12), decimals=False)}
+      - "expense_charity_2": ${currency(expenses.matches('charity').item(1).amount(period_to_use=12), decimals=False)}
+      - "expense_charity_3": ${currency(expenses.matches('charity').item(2).amount(period_to_use=12), decimals=False)}
+      - "expense_loan_1": ${currency(expenses.matches('loan').item(0).amount(period_to_use=12), decimals=False)}
+      - "expense_loan_2": ${currency(expenses.matches('loan').item(1).amount(period_to_use=12), decimals=False)}
+      - "expense_support_1": ${currency(expenses.matches('support').item(0).amount(period_to_use=12), decimals=False)}
       - "expense_support_details": ${expense_support_details}
-      - "expense_support_2": ${currency(expenses.matches('support').item(1).amount(period_to_use=12))}
+      - "expense_support_2": ${currency(expenses.matches('support').item(1).amount(period_to_use=12), decimals=False)}
       - "expenses_total": ${thousands(expenses.total(period_to_use=12))}
       - "expense_other_details": ${expense_other_details}
-      - "expense_other":  ${currency(expenses.total(type='other',period_to_use=12))}
+      - "expense_other":  ${currency(expenses.total(type='other',period_to_use=12), decimals=False)}
       - "monthly_income": ${thousands(grand_total)} 
       - "monthly_expenses": ${thousands(monthly_expenses)}
       - "adjusted_expenses": ${thousands(adjusted_expenses)}

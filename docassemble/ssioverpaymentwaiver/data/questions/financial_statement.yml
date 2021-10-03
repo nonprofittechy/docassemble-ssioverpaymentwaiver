@@ -195,7 +195,7 @@ fields:
 ---
 id: who lives with client  
 question: |
-  Who lives with you?
+  Your household
 subquestion: |
   The Social Security Administration needs to know about your household
   and your financial picture to change the amount or time you take to pay
@@ -660,6 +660,7 @@ subquestion: |
 fields:
   - Owner(s): assets[i].owner
     datatype: object_checkboxes
+    minlength: 1
     none of the above: False
     choices: everyone
   - Name of institution: assets[i].institution_name
@@ -713,6 +714,7 @@ fields:
       is: 'other'     
   - Owner(s): assets[i].owner
     datatype: object_checkboxes
+    minlength: 1
     none of the above: False
     choices: everyone
   - Balance : assets[i].balance
@@ -742,6 +744,7 @@ question: |
 fields:
   - Owner(s): vehicles[i].owner
     datatype: object_checkboxes
+    minlength: 1
     none of the above: False
     choices: everyone
   - Year: vehicles[i].year
@@ -773,6 +776,7 @@ subquestion: |
 fields: 
   - Owner(s): real_estate[i].owner
     datatype: object_checkboxes
+    minlength: 1
     none of the above: False
     choices: everyone
   - Description: real_estate[i].description
@@ -807,6 +811,7 @@ subquestion: |
 fields: 
   - Owner(s): properties[i].owner
     datatype: object_checkboxes
+    minlength: 1
     none of the above: False
     choices: everyone
   - Description: properties[i].description
