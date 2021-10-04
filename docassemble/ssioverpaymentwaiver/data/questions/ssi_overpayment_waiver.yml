@@ -106,7 +106,13 @@ code: |
   overpayment_reason
   overpayment_explanation
 
-  overpayment_benefits_used_for    
+  overpayment_benefits_used_for
+
+  if informed_ssa:
+    if not informed_orally:
+      how_when_where
+    benefits_changed_after_contact
+
   overpayment_why_not_at_fault  
   
   if not possess_overpayment:
@@ -117,11 +123,6 @@ code: |
   
   overpayment_pay_less_reasons
   affordable_amount
-
-  if informed_ssa:
-    if not informed_orally:
-      how_when_where
-    benefits_changed_after_contact
 
   first_overpayment
 
@@ -166,6 +167,8 @@ code: |
   nav.set_section('Finishing up')
   client.address.address
   ssa_office.name.text
+  
+  preview_pdf
   
   run_signature_flow
   #saw_signature_choice
@@ -570,7 +573,7 @@ fields:
 ---
 id: how benefits used
 question: |
-  How were the overpaid benefits used?
+  What did you spend the overpaid benefits on?
 fields:
   - no label: overpayment_benefits_used_for
     datatype: area
@@ -790,6 +793,15 @@ subquestion: |
   
   Take a minute to make sure you have any pay stubs, tax returns or receipts for
   self-employment income, bank statements, and any monthly bills you pay.
+  
+  % if user_logged_in():
+  If you don't have information about all your expenses or if you need a break, your work has been saved and you can come back later to finish the interview.
+  % else:
+  If you don't have information about all your expenses or if you need a break, you can save your work and come back later to finish the interview by creating an account.
+  
+  ${ action_button_html(url_of('register'), label="Create an account") }
+  
+  % endif
 field: need_financials_explanation  
 ---
 id: cash on hand
@@ -925,7 +937,7 @@ if: |
 variable name: overpayment_reason_choices
 data:
   - money_in_bank: ${recordee} had too much money in a bank account
-  - worked_many_hours: ${recordee} worked too many hours
+  - worked_many_hours: ${recordee} went back to work and made too much money
   - out_of_country: ${recordee} went out of the country for more than 30 days
   - something_else: Something else
   - dont_know: I don't know
@@ -1322,6 +1334,17 @@ code: |
 ---
 code: |
   expense_support_details = comma_and_list([item.support_explanation for item in expenses if item.type == "support"])
+---
+id: preview pdf
+continue button field: preview_pdf
+question: |
+  Review your form before you sign it
+subquestion: |
+  Here is a preview of the form you'll sign on the next page. 
+  
+  ${ ssa_634_template if only_change_monthly_due else ssa_632_template }
+   
+  Remember to come back to this window to continue and sign your form.
 ---
 id: download pdf
 event: download_pdf
