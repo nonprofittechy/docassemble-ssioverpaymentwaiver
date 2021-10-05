@@ -2,7 +2,7 @@
 metadata:
   title: SSI Overpayment Waiver Request
   short title: Overpayment Waiver
-  revision_date: 2020-11-14
+  revision_date: 2021-10-05
 ---
 features:
   question help button: True
@@ -13,9 +13,12 @@ features:
     - ssa.js
     - phone.js
 ---
+modules:
+  - docassemble.GithubFeedbackForm.github_issue
+---
 default screen parts:
   under: |
-    Feedback, suggestions, or comments? [Complete this survey](${ interview_url(i=user_info().package + ":feedback.yml", github_repo="docassemble-ssioverpaymentwaiver", github_user='nonprofittechy', variable=user_info().variable, question_id=user_info().question_id, local=False,reset=1)} ){:target="_blank"}.
+    [:comment-dots: Feedback](${ feedback_link(user_info(), github_repo="docassemble-ssioverpaymentwaiver", github_user="nonprofittechy") })
   pre: |
     % if get_config('debug'):
     `id: ${ user_info().question_id }`
