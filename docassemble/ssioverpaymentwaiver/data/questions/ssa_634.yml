@@ -125,10 +125,13 @@ id: download pdf
 question: |
   Here is your document.
 ---
+objects:
+  - ssa_634_template: DADict
+---
 attachment:
   - name: SSA-634 Request for Change in Overpayment Recovery Rate
     filename: SSA-634
-    variable name: ssa_634_template
+    variable name: ssa_634_template[i]
     pdf template file: ssa-634.pdf
     editable: False
     fields:

@@ -1345,7 +1345,7 @@ question: |
 subquestion: |
   Here is a preview of the form you'll sign on the next page. 
   
-  ${ ssa_634_template if only_change_monthly_due else ssa_632_template }
+  ${ ssa_634_template['preview'] if only_change_monthly_due else ssa_632_template['preview'] }
    
   Remember to come back to this window to continue and sign your form.
 ---
@@ -1359,12 +1359,15 @@ subquestion: |
   2. Deliver one copy to your local Social Security Administration
   office.
 attachment code: |
-  ssa_634_template if only_change_monthly_due else ssa_632_template
+  ssa_634_template['final'] if only_change_monthly_due else ssa_632_template['final']
 allow emailing: False
 buttons:
   - Exit: exit
     url: https://www.ssa.gov/ssi/text-overpay-ussi.htm
   - Restart: restart
+---
+objects:
+  - ssa_632_template: DADict
 ---
 need: 
   - grand_total
@@ -1374,7 +1377,7 @@ attachment:
   - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
     skip undefined: True
-    variable name: ssa_632_template
+    variable name: ssa_632_template[i]
     pdf template file: ssa-632.pdf
     # checkbox export value: "On"
     editable: False
