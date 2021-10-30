@@ -358,7 +358,7 @@ subquestion: |
   This form will also ask for your Social Security number. We keep your
   information safe. Click below to learn more.
 fields: 
-  - Before you start you must accept the [terms of use](https://www.gbls.org/self-help/eviction/terms-of-use): intro_screen
+  - Before you start you must accept the [terms of use](https://vlpnet.org/tos-for-guided-interviews/): intro_screen
     datatype: checkboxes
     minlength: 1
     validation messages:
