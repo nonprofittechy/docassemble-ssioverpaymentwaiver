@@ -1429,19 +1429,19 @@ attachment:
       - "client_relationship_spouse": ${ relationship_to_user['spouse'] }
       - "client_relationship_legal_guardian": ${ relationship_to_user['legal_guardian'] }
       - "client_relationship_other": ${ relationship_to_user['other'] }
-      - "client_name": something
-      - "rep_received_benefits_yes": No
-      - "rep_received_benefits_no": No
-      - "someone_else_lived_with_user_yes": something
-      - "someone_else_lived_with_user_no": something
+      - "client_name": ${ beneficiary } # TODO
+      - "rep_received_benefits_yes": ${ not client_is_rep_payee } # TODO: is this still correct?
+      - "rep_received_benefits_no": ${ client_is_rep_payee }
+      - "someone_else_lived_with_user_yes": ${ someone_else_lived_with_user }
+      - "someone_else_lived_with_user_no": ${ not someone_else_lived_with_user }
       - "client_lives_with_overpaid_person_yes": No
       - "client_lives_with_overpaid_person_no": No
       - "waiver_for_minor_child_yes": No
       - "waiver_for_minor_child_no": No
-      - "told_ssa_no": No
-      - "told_ssa_yes": No
-      - "possess_money_yes": No
-      - "possess_money_no": No
+      - "told_ssa_no": ${ informed_ssa }
+      - "told_ssa_yes": ${ not informed_ssa }
+      - "possess_money_yes": ${ possess_overpayment }
+      - "possess_money_no": ${ not possess_overpayment }
       - "possess_money_amount": something
       - "money_used_for_beneficiary_yes": No
       - "money_used_for_beneficiary_no": No
@@ -1503,8 +1503,8 @@ attachment:
       - "client_prevented_from_reporting_other_no": No
       - "why_cant_report_to_ssa": something
       - "client_prevented_from_reporting_other_explain": something
-      - "told_ssa_yes__1": No
-      - "told_ssa_no__1": No
+      - "told_ssa_yes__1": ${ informed_ssa }
+      - "told_ssa_no__1": ${ not informed_ssa }
       - "told_ssa_phone": No
       - "told_ssa_fax_letter": No
       - "told_ssa_in_person": No
@@ -1526,12 +1526,12 @@ attachment:
       - "tanf_claim_number": something
       - "receiving_va_benefits": No
       - "va_benefits_number": something
-      - "possessed_money_yes": No
-      - "possessed_money_no": No
-      - "possessed_money_amount": something
-      - "possess_money_yes__1": No
-      - "possess_money_no__1": No
-      - "possess_money_amount__1": something
+      - "possessed_money_yes": ${ possessed_overpayment_at_notice }
+      - "possessed_money_no": ${ not possessed_overpayment_at_notice }
+      - "possessed_money_amount": ${currency(possessed_overpayment_at_notice_amount, decimals=False) if possessed_overpayment_at_notice else ''}
+      - "possess_money_yes__1": ${ possess_overpayment }
+      - "possess_money_no__1": ${ not possess_overpayment }
+      - "possess_money_amount__1":  ${currency(possess_overpayment_amount, decimals=False) if possess_overpayment else ''}
       - "received_real_estate_yes": No
       - "received_real_estate_no": No
       - "received_real_estate_value": something
@@ -1547,76 +1547,76 @@ attachment:
       - "got_cash_yes": No
       - "got_cash_no": No
       - "got_cash_amount": something
-      - "dependent_1": something
-      - "dependent_1_age": something
-      - "dependent_1_relationship": something
-      - "dependent_2": something
-      - "dependent_2_age": something
-      - "dependent_2_relationship": something
-      - "dependent_3": something
-      - "dependent_3_age": something
-      - "dependent_3_relationship": something
-      - "dependent_4": something
-      - "dependent_4_age": something
-      - "dependent_4_relationship": something
-      - "dependent_5": something
-      - "dependent_5_age": something
-      - "dependent_5_relationship": something
+      - "dependent_1": ${household.item(0)}
+      - "dependent_1_age": ${household.item(0).age}
+      - "dependent_1_relationship": ${household.item(0).relationship}
+      - "dependent_2": ${household.item(1)}
+      - "dependent_2_age": ${household.item(1).age}
+      - "dependent_2_relationship": ${household.item(1).relationship}
+      - "dependent_3": ${household.item(2)}
+      - "dependent_3_age": ${household.item(2).age}
+      - "dependent_3_relationship": ${household.item(2).relationship}
+      - "dependent_4": ${household.item(3)}
+      - "dependent_4_age": ${household.item(3).age}
+      - "dependent_4_relationship": ${household.item(3).relationship}
+      - "dependent_5": ${ household.item(4) }
+      - "dependent_5_age": ${ household.item(4).age }
+      - "dependent_5_relationship": ${ household.item(4).relationship }
       - "non_tax_dependent_yes": No
       - "non_tax_dependent_no": No
       - "non_tax_dependent_contributes_to_expenses_yes": No
       - "non_tax_dependent_contributes_to_expenses_no": No
       - "non_tax_dependent_contributes_to_expenses_amount": something
-      - "account_1_type": something
-      - "account_1_name_address": something
-      - "account_1_owner": something
-      - "account_1_balance": something
-      - "account_1_income": something
-      - "account_1_number": something
-      - "account_2_type": something
-      - "account_2_name_address": something
-      - "account_2_owner": something
-      - "account_2_balance": something
-      - "account_2_income": something
-      - "account_2_number": something
-      - "account_3_type": something
-      - "account_3_name_address": something
-      - "account_3_owner": something
-      - "account_3_balance": something
-      - "account_3_income": something
-      - "account_3_number": something
-      - "account_4_type": something
-      - "account_4_name_address": something
-      - "account_4_owner": something
-      - "account_4_balance": something
-      - "account_4_income": something
-      - "account_4_number": something
-      - "account_5_type": something
-      - "account_5_name_address": something
-      - "account_5_owner": something
-      - "account_5_balance": something
-      - "account_5_income": something
-      - "account_5_number": something
+      - "account_1_type": ${ assets.item(0).type }
+      - "account_1_name_address": ${ assets.item(0).institution_name } ${ assets.item(0).institute_address } 
+      - "account_1_owner": ${ assets.item(0).owner }
+      - "account_1_balance": ${ assets.item(0).balance }
+      - "account_1_income": ${ assets.item(0).amount(period_to_use=12) }
+      - "account_1_number": ${ assets.item(0).account_number }
+      - "account_2_type": ${ assets.item(1).type }
+      - "account_2_name_address": ${ assets.item(1).institution_name } ${ assets.item(1).institute_address } 
+      - "account_2_owner": ${ assets.item(1).owner }
+      - "account_2_balance": ${ assets.item(1).balance }
+      - "account_2_income": ${ assets.item(1).amount(period_to_use=12) }
+      - "account_2_number": ${ assets.item(1).account_number }
+      - "account_3_type": ${ assets.item(2).type }
+      - "account_3_name_address": ${ assets.item(2).institution_name } ${ assets.item(2).institute_address } 
+      - "account_3_owner": ${ assets.item(2).owner }
+      - "account_3_balance": ${ assets.item(2).balance }
+      - "account_3_income": ${ assets.item(2).amount(period_to_use=12) }
+      - "account_3_number": ${ assets.item(2).account_number }
+      - "account_4_type": ${ assets.item(3).type }
+      - "account_4_name_address": ${ assets.item(3).institution_name } ${ assets.item(3).institute_address } 
+      - "account_4_owner": ${ assets.item(3).owner }
+      - "account_4_balance": ${ assets.item(3).balance }
+      - "account_4_income": ${ assets.item(3).amount(period_to_use=12) }
+      - "account_4_number": ${ assets.item(3).account_number }
+      - "account_5_type": ${ assets.item(4).type }
+      - "account_5_name_address": ${ assets.item(4).institution_name } ${ assets.item(4).institute_address } 
+      - "account_5_owner": ${ assets.item(4).owner }
+      - "account_5_balance": ${ assets.item(4).balance }
+      - "account_5_income": ${ assets.item(4).amount(period_to_use=12) }
+      - "account_5_number": ${ assets.item(4).account_number }
       - "accounts_total_balance": something
       - "accounts_total_income": something
       - "client_owns_car_yes": No
       - "client_owns_car_no": No
       - "business_total_loan": something
-      - "vehicle_owner_1": something
-      - "vehicle_year_make_model_1": something
-      - "vehicle_pv_1": something
-      - "vehicle_loan_balance_1": something
-      - "vehicle_purpose_1": something
-      - "vehicle_owner_2": something
-      - "vehicle_year_make_model_2": something
-      - "vehicle_pv_2": something
-      - "vehicle_loan_balance_2": something
-      - "vehicle_purpose_2": something
-      - "vehicle_owner_3": something
-      - "vehicle_year_make_model_3": something
-      - "vehicle_pv_3": something
-      - "vehicle_loan_balance_3": something
-      - "vehicle_purpose_3": something
+      - "vehicle_owner_1": ${vehicles.item(0).owner}
+      - "vehicle_year_make_model_1": ${vehicles.item(0).year_make_model() }
+      - "vehicle_pv_1": ${thousands(vehicles.item(0).value)}
+      - "vehicle_loan_balance_1": ${thousands(vehicles.item(0).balance)}
+      - "vehicle_purpose_1": ${vehicles.item(0).primary_purpose}
+      - "vehicle_owner_2": ${vehicles.item(1).owner}
+      - "vehicle_year_make_model_2": ${vehicles.item(1).year_make_model() }
+      - "vehicle_pv_2": ${thousands(vehicles.item(1).value)}
+      - "vehicle_loan_balance_2": ${thousands(vehicles.item(1).balance)}
+      - "vehicle_purpose_2": ${vehicles.item(1).primary_purpose}
+      - "vehicle_owner_3": ${vehicles.item(2).owner}
+      - "vehicle_year_make_model_3": ${vehicles.item(2).year_make_model() }
+      - "vehicle_pv_3": ${thousands(vehicles.item(2).value)}
+      - "vehicle_loan_balance_3": ${thousands(vehicles.item(2).balance)}
+      - "vehicle_purpose_3": ${vehicles.item(2).primary_purpose}
       - "vehicle_total_value": something
       - "client_owns_real_estate_yes": No
       - "client_owns_real_estate_no": No
