@@ -140,12 +140,30 @@ attachment:
       - requestor_claim_number: ${ recordee.claim_number }
       - is_overpaid_person: ${ recordee == client }
       - is_overpaid_person_no: ${ not recordee == client }
-      - am_overpaid_parent: ${ relationship_to_overpaid == "parent" if not recordee == client else ''}
-      - am_overpaid_spouse: ${ relationship_to_overpaid == "spouse" if not recordee == client else ''}
-      - am_overpaid_rep_payee: ${ relationship_to_overpaid == "representative payee" if not recordee == client else ''}
-      - am_overpaid_guardian: ${ relationship_to_overpaid == "legal guardian" if not recordee == client else ''}
-      - overpaid_other_relationship: ${ relationship_to_overpaid == "other" if not recordee == client else ''}
-      - other_relationship_with_overpaid: ${ optional('other_relationship') }
+      - am_overpaid_parent: |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['parent'] }
+          % endif
+      - am_overpaid_spouse: |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['spouse'] }
+          % endif
+      - am_overpaid_rep_payee: |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['rep_payee'] }
+          % endif
+      - am_overpaid_guardian: |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['legal_guardian'] }
+          % endif
+      - overpaid_other_relationship: |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['other'] }
+          % endif
+      - other_relationship_with_overpaid: |
+          % if not client_is_overpaid_person and relationship_to_user['other']:
+          ${ client_relationship_other_explanation }
+          % endif
       - filer_name: ${ "" if recordee == client else client.name }
       - receiving_ssi: ${ optional('benefit_types_received["SSI"]') }
       - receiving_tanf: ${ optional('benefit_types_received["TANF"]') }

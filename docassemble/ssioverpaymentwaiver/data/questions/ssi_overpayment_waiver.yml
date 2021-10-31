@@ -33,8 +33,6 @@ include:
 ---
 objects:
   - recordee: Individual
-  - overpaid_persons: DAList.using(object_type=Individual,there_is_another=False)
-  - beneficiary: Individual
   - ssa_office: Person
   - officelist: FieldOfficeList
 ---
@@ -63,9 +61,9 @@ code: |
 
   nav.set_section('Who is requesting a waiver?')
   client_is_overpaid_person
-  household_questions
   recordee.name.first
   
+  household_questions # TODO: move these  
   
   agree_overpaid
   if not agree_overpaid:
@@ -78,20 +76,13 @@ code: |
     household.target_number = 0
     household.gathered = True
 
-  if not recordee == client:
-    relationship_to_overpaid
-  else:
+  if recordee == client:
     client_is_rep_payee = False
-  
-  beneficiary.name.first
-  
+    
   if has_spouse:
     spouse.name.first
   if household.there_are_any:
     review_household_members
-
-  if overpaid_persons.there_are_any:
-    review_overpaid_persons  
   
   nav.set_section('Information about the overpayment')
   
@@ -201,7 +192,7 @@ code: |
 ---
 id: client_is_overpaid_person
 question: |
-  Are you filing for yourself or someone else?
+  ${ client.familiar() }, are you filing for yourself or someone else?
 fields:
   - no label: filing_for
     datatype: radio
@@ -219,6 +210,9 @@ fields:
     show if:
       variable: filing_for
       is: someone_else      
+  - Please explain: client_relationship_other_explanation
+    datatype: area
+    show if: relationship_to_user['other']
 ---
 depends on:
   - filing_for
@@ -453,48 +447,19 @@ question: |
 subquestion:
   Whose account is the overpayment on?
   Look at the letter about the overpayment that you got from Social Security.
-  Look for a Social Security or Claim Number on the letter. Write down the name 
+  Look for a Social Security or Claim Number on the letter. Write down the 
+  name 
   of the person who has that
   Social Security number.
 fields:
-  - no label: recordee
-    datatype: object_radio
-    disable others: True
-    default: client
-    object labeler: |
-      lambda y: "Me (" + str(y) + ")"
-    none of the above: |
-      Someone else
-    choices: |
-      who_overpaid_options
   - First name: recordee.name.first
   - Middle name: recordee.name.middle
     required: False
   - Last name: recordee.name.last
-  #- Social Security Number: recordee.ssn
-  #  datatype: ssn
-  #  validate: is_valid_ssn
-  #- Claim number: recordee.claim_number
-  #  required: False
 ---
-id: representation to overpaid
-question: |
-  What is your relationship to ${recordee}?
-subquestion:
-  You are ${recordee.possessive("___")}
-fields:
-  - no label: relationship_to_overpaid
-    #input type: checkboxes
-    choices:
-      - parent
-      - spouse
-      - representative payee
-      - legal guardian
-      - other
-  - Other: other_relationship
-    input type: area
-    js show if: |
-      val("relationship_to_overpaid") === "other"
+code: |
+  if client_is_overpaid_person:
+    recordee = client
 ---
 code: |
   if recordee == client:
@@ -508,15 +473,36 @@ code: |
 ---
 id: agree overpaid
 question: |
+  % if client_is_overpaid_person:
+  Do you agree that you got too much money from Social Security?
+  % else:
   Do you agree that ${recordee} got too much money from Social Security?
+  % endif
 subquestion: |
   Choose the answer that best matches what you understand about what happened.
   If you agree that ${recordee} was overpaid, you are _not_ agreeing that you
   need to pay the Social Security Administration back.
 field: agree_overpaid
 choices:
-  - I disagree that ${recordee} got too much money. I think ${recordee} was paid the right amount: False
-  - I agree ${recordee} was paid too much, even if it was an accident.: True
+  - ${ disagree_overpaid_template }: False
+  - ${ agree_overpaid_template }: True
+---
+template: disagree_overpaid_template
+content: |
+  % if client_is_overpaid_person:
+  I disagree that I got too much money. I think I was paid the right amount.
+  % else:
+  I disagree that ${recordee} got too much money. I think ${recordee} was paid the right amount.
+  % endif
+---
+template: agree_overpaid_template
+content: |
+  % if client_is_overpaid_person:
+  I agree I was paid too much, even if it was an accident.
+  % else:
+  I agree ${recordee} was paid too much, even if it was an accident.
+  % endif
+
 ---
 id: objective
 question: |
@@ -618,71 +604,6 @@ fields:
     datatype: area
     maxlength: 86
 ---
-id: beneficiary info
-question: |
-  Who is the beneficiary?
-subquestion: |
-  Sometimes the person who uses the benefits is different than the person
-  who earned them. For example, a spouse or dependent may get the benefits
-  earned by someone who worked who retired or became disabled.
-  If ${recordee} both earned and uses the benefits, just select their name here.
-fields:
-  - Somebody already mentioned: beneficiary
-    datatype: object_radio
-    default: client
-    disable others: True
-    choices: |
-      everyone
-    none of the above: Someone else      
-    object labeler: |
-      lambda y: str(y) if y != client else 'Me (' + str(y) + ')'
-  - First name: beneficiary.name.first
-  - Last name: beneficiary.name.last
-  - Address: beneficiary.address.address
-    address autocomplete: True
-  - Unit or Apt: beneficiary.address.unit
-    required: False
-  - City: beneficiary.address.city
-  - State: beneficiary.address.state
-    code: |
-      states_list()
-  - Zip code: beneficiary.address.zip
-    required: False
-  - County: beneficiary.address.county
-    required: False      
----
-id: additional users
-question: |
-  Is anyone else using this form with you?
-subquestion: |
-  If the Social Security Administration says that more than one person has to
-  pay them back, they can use this form with you.
-  
-  If you think you and the other person may disagree about whose fault the
-  overpayment was, it may be safest for you each to use your own forms.
-  
-  Do you want to list someone else on this form with you who will also be asking the
-  Social Security Administration to waive the overpayment?
-yesno: overpaid_persons.there_are_any
----
-id: additional user info
-question: |
-  Who is the ${ordinal(i)} person who will use the form with you?
-fields:
-  - Somebody already mentioned: overpaid_persons[i]
-    datatype: object
-    disable others: True
-    choices: |
-      everyone_but_me
-  - First name: overpaid_persons[i].name.first
-  - Middle name: overpaid_persons[i].name.middle
-    required: False
-  - Last name: overpaid_persons[i].name.last
-  - Social Security Number: overpaid_persons[i].ssn
-    validate: is_valid_ssn
-    datatype: ssn
-
----
 id: social security number
 generic object: Individual
 question: |
@@ -710,36 +631,6 @@ subquestion: |
 fields:
   - Claim number: x.claim_number
     required: False
----
-id: review overpaid persons 
-question: |
-  Overpaid Persons
-subquestion: |
-  So far you have told us about ${overpaid_persons.number()} people who will
-  be listed on this form with you. You can add another person, or click
-  continue to go to the next question.
-  ${ overpaid_persons.table }
-  ${overpaid_persons.add_action()}
-field: review_overpaid_persons
----
-table: overpaid_persons.table
-rows: overpaid_persons
-columns:
-  - Name: |
-      row_item
-  - Social Security Number: |
-      row_item.ssn
-edit:
-  - row_item.name.first
-  - row_item.ssn
----
-id: overpaid person info
-question: |
-  Who is the ${ordinal(i)} overpaid person?  
-fields:
-  - Social Security Number: overpaid_persons[i].ssn
-    validate: is_valid_ssn
-    datatype: ssn
 ---
 id: have overpaid money
 question: |
@@ -1424,12 +1315,31 @@ attachment:
       - "record_ssn": ${ recordee.ssn }
       - "client_is_overpaid_person_yes": ${ client_is_overpaid_person }
       - "client_is_overpaid_no": ${ not client_is_overpaid_person }
-      - "client_relationship_parent": ${ relationship_to_user['parent'] }
-      - "client_relationship_rep_payee": ${ relationship_to_user['rep_payee'] }
-      - "client_relationship_spouse": ${ relationship_to_user['spouse'] }
-      - "client_relationship_legal_guardian": ${ relationship_to_user['legal_guardian'] }
-      - "client_relationship_other": ${ relationship_to_user['other'] }
-      - "client_name": ${ beneficiary } # TODO
+      - "client_relationship_parent": |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['parent'] }
+          % endif
+      - "client_relationship_rep_payee": |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['rep_payee'] }
+          % endif
+      - "client_relationship_spouse": |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['spouse'] }
+          % endif
+      - "client_relationship_legal_guardian": |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['legal_guardian'] }
+          % endif
+      - "client_relationship_other": |
+          % if not client_is_overpaid_person:
+          ${ relationship_to_user['other'] }
+          % endif
+      - "client_relationship_other_explanation": |
+          % if not client_is_overpaid_person and relationship_to_user['other']:
+          ${ client_relationship_other_explanation }
+          % endif
+      - "client_name": ${ recordee } # TODO
       - "rep_received_benefits_yes": ${ not client_is_rep_payee } # TODO: is this still correct?
       - "rep_received_benefits_no": ${ client_is_rep_payee }
       - "someone_else_lived_with_user_yes": ${ someone_else_lived_with_user }
