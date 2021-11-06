@@ -4,6 +4,7 @@ An interview to help an individual appeal an overpayment set by the Social
 Security Administration.
 
 # Changelog
+* 2021-11-06 Add 2019 version of SSA-632BK
 * 2021-10-03 Fix office locator
 * 2021-10-03 Merge previous fixes
 * 2020-12-12 Bug fixes
