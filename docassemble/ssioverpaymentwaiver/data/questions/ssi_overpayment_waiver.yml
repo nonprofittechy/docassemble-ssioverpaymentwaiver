@@ -58,9 +58,11 @@ code: |
   nav.set_section('Getting started')
   intro_screen
   client.name.first
+  client_has_overpayment_notice
 
   nav.set_section('Who is requesting a waiver?')
-  client_is_overpaid_person
+  if not client_is_overpaid_person:
+    client_lives_with_overpaid_person
   recordee.name.first
   
   household_questions # TODO: move these  
@@ -116,7 +118,9 @@ code: |
     pay_ssa_explanation
   
   overpayment_pay_less_reasons
+  cant_pay_at_all
   affordable_amount
+  overpayment_waiver_second_request
 
   first_overpayment
 
@@ -218,6 +222,13 @@ depends on:
   - filing_for
 code: |
   client_is_overpaid_person = filing_for == "self"
+---
+id: client_has_overpayment_notice
+question: |
+  Do you have the notice from Social Security administration with you?
+fields:
+  - no label: client_has_overpayment_notice
+    datatype: yesnoradio
 ---
 id: will_receive_inheritance
 question: |
@@ -589,12 +600,52 @@ yesno: client_is_rep_payee
 ---
 id: overpayment info
 question: |
-  Tell us about ${recordee}'s overpayment
+  Did you have any control over the overpayment?
 fields:
   - Did you live with ${recordee} when the overpayment happened?: someone_else_lived_with_user
     datatype: yesnoradio
+  - Do you live with ${ recordee } right now?: client_lives_with_overpaid_person
+    datatype: yesnoradio
+  - Is ${ recordee } under 18 now?: waiver_for_minor_child
+    datatype: yesnoradio
   - Did you receive any of the overpaid money?:   someone_else_user_received_benefits
     datatype: yesnoradio
+  - Did you use the money for ${ recordee }?: money_used_for_beneficiary
+    datatype: yesnoradio
+---
+id: your situation
+question: |
+  % if client_is_overpaid_person:
+  When the overpayment happened, were you:
+  % else:
+  When the overpayment happened, was ${ recordee }:
+  % endif
+subquestion: |
+  ()
+fields:
+  - label: |
+      % if client_is_overpaid_person:
+      Select any that applied when you got the overpayment
+      % else:
+      Select any that applied to ${ recordee.familiar() } when they got the overpayment
+      % endif
+    field: situation_at_overpayment
+    datatype: checkboxes
+    choices:
+      - under the age of 18: situation_client_minor_when_received
+      - over the age of 18: situation_client_adult_when_received
+      - getting disability benefits: situation_client_getting_disability_benefits_when_overpaid
+      - getting retirement benefits: situation_client_getting_retirement_benefits_when_overpaid
+      - getting benefits on a parent's record: situation_client_getting_parent_benefits_when_overpaid
+      - getting benefits from a spouse who passed away: situation_client_getting_widow_benefits_when_overpaid
+      - getting benefits from a spouse: situation_client_getting_spousal_benefits_when_overpaid
+      - getting Supplemental Security Income (SSI) benefits: situation_client_getting_ssi_benefits_when_overpaid
+  - Explain: situation_none_of_above_explain
+    maxlength: 50
+    show if:
+      variable: situation_at_overpayment
+      is: None
+      # TODO: this doesn't work, might need to replace w/ js show if      
 ---
 id: how benefits used
 question: |
@@ -758,21 +809,40 @@ id: actions after overpayment notice
 question: |
   What happened after you got the overpayment notice from Social Security?
 subquestion: |
+  % if not client_is_overpaid_person:
   Think about what happened after Social Security told you that ${recordee} got
   too much money.
+  % endif
 fields:  
-  - Did you lend or give away any property or cash after the notice of overpayment?: gave_cash_after_notice
+  - Did you give away any money after the notice of overpayment?: gave_cash_after_notice
     datatype: yesnoradio
-  - Describe who got the property or cash, what it was and its value: gave_cash_after_notice_explanation
-    datatype: area
-    maxlength: 170
+  - How much money?: gave_away_cash_amount
+    datatype: currency
     show if: gave_cash_after_notice
-  - Did you get or sell any property or get any cash, (other than money you got from working), after the notice of overpayment?: received_cash_after_notice
+  - Did you get any cash, (other than money you got from working), after the notice of overpayment?: received_cash_after_notice
     datatype: yesnoradio
-  - Describe the property and sale price, or amount of cash received: received_cash_after_notice_explanation
+  - How much cash did you get?: got_cash_amount
     datatype: area
     maxlength: 170
     show if: received_cash_after_notice
+  - Did you sell any real estate after the notice of overpayment?: sold_real_estate
+    datatype: yesnoradio
+  - How much was it worth?: sold_real_estate_amount
+    help: |
+      Enter a dollar amount, or put your best estimate.
+    maxlength: 20    
+  - Did you give away any real estate after the notice of overpayment?: gave_away_real_estate
+    datatype: yesnoradio
+  - How much was it worth?: gave_away_real_estate_amount
+    help: |
+      Enter a dollar amount, or put your best estimate.
+    maxlength: 20
+  - Did you get any real estate after the notice of overpayment?: received_real_estate
+    datatype: yesno
+  - How much was it worth?: received_real_estate_amount
+    help: |
+      Enter a dollar amount, or put your best estimate.
+    maxlength: 20         
 ---
 id: why cant return overpayment
 question: |
@@ -802,21 +872,29 @@ fields:
 ---
 id: ability to pay
 question: |
-  Can you pay back the full amount?
+  Why are you asking for an overpayment?
 subquestion: |
   Check any of the below that apply
 fields:
   - no label: overpayment_pay_less_reasons
     datatype: checkboxes
     choices:
-      - I cannot afford to pay back the money
-      - The overpayment was not my fault
-      - Requiring me to pay back the overpayment is unfair
-    none of the above: None of the above. I can pay **everything** back      
+      - I cannot afford to pay back the money: cannot_afford
+      - The overpayment was not my fault: not_my_fault
+      - Requiring me to pay back the overpayment is unfair: unfair
+      - I thought I still had a disability that would make me eligible for benefits. I filed an appeal and I fully cooperated with Social Security.: thought_disabled
+      - I was age 18 and receiving SSI when the overpayment occurred.: 18_with_ssi
+  - Why is it unfair to ask you to pay back the overpayment?: overpayment_why_unfair
+    datatype: area
+    show if: overpayment_pay_less_reasons['Requiring me to pay back the overpayment is unfair']
+    maxlength: 70
+  - Why?: overpayment_other_reason_explain    
+    js show if: |
+      !( val('overpayment_pay_less_reasons["cannot_afford"]) || val('overpayment_pay_less_reasons["not_my_fault"]) || val('overpayment_pay_less_reasons["unfair"]) || val('overpayment_pay_less_reasons["thought_disabled"]) || val('overpayment_pay_less_reasons["18_with_ssi"]) )
 ---
 code: |
-  overpayment_not_my_fault = overpayment_pay_less_reasons['The overpayment was not my fault']
-  overpayment_cant_afford = overpayment_pay_less_reasons['The overpayment was not my fault']
+  overpayment_not_my_fault = overpayment_pay_less_reasons['not_my_fault']
+  overpayment_cant_afford = overpayment_pay_less_reasons['cannot_afford']
 ---
 id: amount can pay
 question: |
@@ -828,9 +906,17 @@ fields:
   - '': affordable_amount
     datatype: currency
     hide if: cant_pay_at_all
-validation code: |
+---
+code: |
   if cant_pay_at_all:
     affordable_amount = 0
+---
+id: overpayment_waiver_second_request
+question: |
+  Have you ever asked the Social Security Administration to waive this overpayment before?
+fields:
+  - no label: overpayment_waiver_second_request
+    datatype: yesnoradio
 ---
 id: ssi payment status
 question: |
@@ -854,23 +940,147 @@ fields:
     code: |
       overpayment_reason_choices
 ---
-if: |
-  payment_type['other'] and not payment_type['SSI']
 variable name: overpayment_reason_choices
 data:
-  - out_of_country: ${recordee} went out of the country for more than 30 days
+  - worked_many_hours: |
+      % if not client_is_overpaid_person:
+      ${recordee} went back to work and made too much money
+      % else:
+      I got too much money from working
+      % endif
+  - household_too_much_income: |
+      % if not client_is_overpaid_person:
+      Someone in ${recordee}'s household made too much money
+      % else:
+      Someone in my household made too much money
+      % endif      
+  - money_in_bank: |
+      % if not client_is_overpaid_person:
+      ${recordee} had too much money in a bank account
+      % else:
+      I had too much money in my bank account
+      % endif
+  - help_food_shelter: |
+      % if not client_is_overpaid_person:
+      ${ recordee } got help for food and shelter
+      % else:
+      I got got help food and shelter
+      % endif
+  - double_payment: |
+      % if not client_is_overpaid_person:
+      Social Security paid ${ recordee } more than once in the same month
+      % else:
+      Social Security paid me more than once in the same month
+      % endif
+  - not_disabled: |
+      % if not client_is_overpaid_person:
+      Social Security says that ${ recordee } is not disabled any more
+      % else:
+      Social Security says that I am not disabled any more
+      % endif
+  - marriage_divorce: |
+      % if not client_is_overpaid_person:
+      ${ recordee } got married or divorced
+      % else:
+      I got married or divorced
+      % endif
+  - workers_comp: |
+      % if not client_is_overpaid_person:
+      ${ recordee } got worker's compensation
+      % else:
+      I got worker's compensation
+      % endif
+  - nursing_home: |
+      % if not client_is_overpaid_person:
+      ${ recordee} was in a nursing home
+      % else:
+      I was in a nursing home
+      % endif
+  - jail_prison: |
+      % if not client_is_overpaid_person:
+      ${ recordee } was in jail or prison
+      % else:
+      I was in jail or prison
+      % endif
+  - out_of_country: |
+      % if not client_is_overpaid_person:
+      ${recordee} went out of the country for more than 30 days
+      % else:
+      I went out of the coutnry for more than 30 days
+      % endif
+  - immigration_status: |
+      % if not client_is_overpaid_person:
+      ${ recordee }'s immigration status changed
+      % else:
+      My immigration status changed
+      % endif
+  - other_entitlee: |
+      % if not client_is_overpaid_person:
+      Someone else got entitled on ${ recordee }'s same record
+      % else:
+      Someone else got entitled on my same record
+      % endif
+  - attorney_fee: |
+      % if not client_is_overpaid_person:
+      ${ recordee }'s attorney got paid for getting their SSI award but 
+      it was not taken out of ${ recordee.familiar() }'s benefits
+      % else:
+      My attorney got paid for getting my SSI award but 
+      it was not taken out of my benefits
+      % endif      
+  - not_student: |
+      % if not client_is_overpaid_person:
+      ${ recordee } was no longer a student
+      % else:
+      I was no longer a student
+      % endif
+  - no_child: |
+      % if not client_is_overpaid_person:
+      ${ recordee } did not have a child under 16 or a disabled child any more
+      % else:
+      I did not have a child under 16 or a disabled child any more
+      % endif     
   - something_else: Something else
   - dont_know: I don't know
+
 ---
-if: |
-  payment_type['SSI']
-variable name: overpayment_reason_choices
-data:
-  - money_in_bank: ${recordee} had too much money in a bank account
-  - worked_many_hours: ${recordee} went back to work and made too much money
-  - out_of_country: ${recordee} went out of the country for more than 30 days
-  - something_else: Something else
-  - dont_know: I don't know
+# if: |
+#   payment_type['other'] and not payment_type['SSI']
+# variable name: overpayment_reason_choices
+# data:
+#   - out_of_country: |
+#       % if not client_is_overpaid_person:
+#       ${recordee} went out of the country for more than 30 days
+#       % else:
+#       I went out of the coutnry for more than 30 days
+#       % endif
+#   - something_else: Something else
+#   - dont_know: I don't know
+# ---
+# if: |
+#   payment_type['SSI']
+# variable name: overpayment_reason_choices
+# data:
+#   - money_in_bank: |
+#       % if not client_is_overpaid_person:
+#       ${recordee} had too much money in a bank account
+#       % else:
+#       I had too much money in my bank account
+#       % endif
+#   - worked_many_hours: |
+#       % if not client_is_overpaid_person:
+#       ${recordee} went back to work and made too much money
+#       % else:
+#       I got too much money from working
+#       % endif
+#   - out_of_country: |
+#       % if not client_is_overpaid_person:  
+#       ${recordee} went out of the country for more than 30 days
+#       % else:
+#       I left the country for more than 30 days
+#       % endif
+#   - something_else: Something else
+#   - dont_know: I don't know
 ---
 id: overpayment explanation
 question: |
@@ -1342,67 +1552,88 @@ attachment:
       - "client_name": ${ recordee } # TODO
       - "rep_received_benefits_yes": ${ not client_is_rep_payee } # TODO: is this still correct?
       - "rep_received_benefits_no": ${ client_is_rep_payee }
-      - "someone_else_lived_with_user_yes": ${ someone_else_lived_with_user }
-      - "someone_else_lived_with_user_no": ${ not someone_else_lived_with_user }
-      - "client_lives_with_overpaid_person_yes": No
-      - "client_lives_with_overpaid_person_no": No
-      - "waiver_for_minor_child_yes": No
-      - "waiver_for_minor_child_no": No
+      - "someone_else_lived_with_user_yes": |
+          % if not client_is_overpaid_person:
+          ${ someone_else_lived_with_user }
+          % endif
+      - "someone_else_lived_with_user_no": |
+          % if not client_is_overpaid_person:
+          ${ not someone_else_lived_with_user }
+          % endif      
+      - "client_lives_with_overpaid_person_yes": |
+          % if not client_is_overpaid_person:
+          ${ client_lives_with_overpaid_person }
+          % endif
+      - "client_lives_with_overpaid_person_no": |
+          % if not client_is_overpaid_person:
+          ${ not client_lives_with_overpaid_person}
+          % endif
+      - "waiver_for_minor_child_yes": |
+          % if not client_is_overpaid_person:
+          ${ waiver_for_minor_child }
+          % endif
+      - "waiver_for_minor_child_no": |
+          % if not client_is_overpaid_person:
+          ${ not waiver_for_minor_child }
+          % endif
       - "told_ssa_no": ${ informed_ssa }
       - "told_ssa_yes": ${ not informed_ssa }
       - "possess_money_yes": ${ possess_overpayment }
       - "possess_money_no": ${ not possess_overpayment }
-      - "possess_money_amount": something
-      - "money_used_for_beneficiary_yes": No
-      - "money_used_for_beneficiary_no": No
-      - "benefits_used_for": something
+      - "possess_money_amount": ${ possess_overpayment_amount }
+      - "money_used_for_beneficiary_yes": ${ money_used_for_beneficiary }
+      - "money_used_for_beneficiary_no": ${ not money_used_for_beneficiary }
+      - "benefits_used_for": ${ overpayment_benefits_used_for }
       - "ssa_told_client_must_pay_for_someone_else_yes": something
       - "client_received_overpaid_money_yes": No
       - "client_received_overpaid_money_no": No
-      - "situation_client_minor_when_received": No
-      - "situation_client_adult_when_received": No
-      - "situation_client_getting_disability_benefits_when_overpaid": No
-      - "situation_client_getting_retirement_benefits_when_overpaid": No
-      - "situation_client_getting_parent_benefits_when_overpaid": No
-      - "situation_client_getting_widow_benefits_when_overpaid": No
-      - "situation_client_getting_spousal_benefits_when_overpaid": No
-      - "situation_client_getting_ssi_benefits_when_overpaid": No
-      - "situation_none_of_above_explain": something
-      - "situation_none_of_above": No
-      - "overpayment_not_my_fault": ${yesno(overpayment_pay_less_reasons.any_true())} # TODO
-      - "overpayment_cannot_afford": No
-      - "overpayment_unfair": No
-      - "overpayment_why_unfair": something
-      - "overpayment_thought_qualified": No
-      - "overpayment_still_18": No
-      - "overpayment_other_reason_explain": something
-      - "overpayment_other_reason": No
-      - "overpayment_waive_everything_yes": No
-      - "overpayment_waive_everything_no": No
-      - "overpayment_waiver_second_request_no": No
-      - "overpayment_waiver_second_request_yes": No
-      - "client_has_overpayment_notice_yes": No
-      - "client_has_overpayment_notice_no": No
+      - "situation_client_minor_when_received": ${ situation_at_overpayment['situation_client_minor_when_received'] }
+      - "situation_client_adult_when_received": ${ situation_at_overpayment['situation_client_adult_when_received'] }
+      - "situation_client_getting_disability_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_disability_benefits_when_overpaid'] }
+      - "situation_client_getting_retirement_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_retirement_benefits_when_overpaid'] }
+      - "situation_client_getting_parent_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_parent_benefits_when_overpaid'] }
+      - "situation_client_getting_widow_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_widow_benefits_when_overpaid'] }
+      - "situation_client_getting_spousal_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_spousal_benefits_when_overpaid'] }
+      - "situation_client_getting_ssi_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_ssi_benefits_when_overpaid'] }
+      - "situation_none_of_above_explain": ${ situation_none_of_above_explain }
+      - "situation_none_of_above": ${ situation_at_overpayment.all_false() }
+      - "overpayment_not_my_fault": ${overpayment_pay_less_reasons['not_my_fault'] } # TODO
+      - "overpayment_cannot_afford": ${ overpayment_pay_less_reasons['cannot_afford'] }
+      - "overpayment_unfair":  ${ overpayment_pay_less_reasons['unfair'] }
+      - "overpayment_why_unfair": ${ overpayment_why_unfair }
+      - "overpayment_thought_qualified":  ${ overpayment_pay_less_reasons['thought_disabled'] }
+      - "overpayment_still_18": ${ overpayment_pay_less_reasons['18_with_ssi'] }
+      - "overpayment_other_reason_explain": |
+          % if overpayment_pay_less_reasons.all_false():
+          ${ overpayment_other_reason_explain }
+          % endif
+      - "overpayment_other_reason": ${ overpayment_pay_less_reasons.all_false() }
+      - "overpayment_waive_everything_yes": ${ cant_pay_at_all }
+      - "overpayment_waive_everything_no": ${ not cant_pay_at_all }
+      - "overpayment_waiver_second_request_no": ${ overpayment_waiver_second_request }
+      - "overpayment_waiver_second_request_yes": ${ not overpayment_waiver_second_request }
+      - "client_has_overpayment_notice_yes": ${ client_has_overpayment_notice }
+      - "client_has_overpayment_notice_no": ${ not client_has_overpayment_notice }
       - "overpayment_notice_date": something
       - "overpayment_notice_first_overpayment": something
       - "overpayment_notice_last_overpayment": something
       - "overpayment_notice_exact_month": something
-      - "overpayment_reason_income_too_high": No
-      - "overpayment_reason_household_income_too_high": No
-      - "overpayment_reason_savings_too_high": No
-      - "overpayment_reason_got_help": No
-      - "overpayment_reason_double_benefits": No
-      - "overpayment_reason_not_disabled": No
-      - "overpayment_reason_marital_status": No
-      - "overpayment_reason_workers_comp": No
-      - "overpayment_reason_nursing_home": No
-      - "overpayment_reason_jail": No
-      - "overpayment_reason_outside_us": No
-      - "overpayment_reason_immigration_status": No
-      - "overpayment_reason_another_entitlee": No
-      - "overpayment_reason_attorney_fee_not_withheld": No
-      - "overpayment_reason_student_status": No
-      - "overpayment_reason_dependent_child_status": No
+      - "overpayment_reason_income_too_high": ${ overpayment_reason['worked_many_hours']}
+      - "overpayment_reason_household_income_too_high": ${ overpayment_reason['household_too_much_income']}
+      - "overpayment_reason_savings_too_high": ${ overpayment_reason['money_in_bank']}
+      - "overpayment_reason_got_help": ${ overpayment_reason['help_food_shelter']}
+      - "overpayment_reason_double_benefits": ${ overpayment_reason['double_payment']}
+      - "overpayment_reason_not_disabled": ${ overpayment_reason['not_disabled']}
+      - "overpayment_reason_marital_status": ${ overpayment_reason['marriage_divorce']}
+      - "overpayment_reason_workers_comp": ${ overpayment_reason['workers_comp']}
+      - "overpayment_reason_nursing_home": ${ overpayment_reason['nursing_home']}
+      - "overpayment_reason_jail": ${ overpayment_reason['jail_prison']}
+      - "overpayment_reason_outside_us": ${ overpayment_reason['out_of_country']}
+      - "overpayment_reason_immigration_status": ${ overpayment_reason['immigration_status']}
+      - "overpayment_reason_another_entitlee": ${ overpayment_reason['other_entitlee']}
+      - "overpayment_reason_attorney_fee_not_withheld": ${ overpayment_reason['attorney_fee']}
+      - "overpayment_reason_student_status": ${ overpayment_reason['not_student']}
+      - "overpayment_reason_dependent_child_status": ${ overpayment_reason['no_child']}
       - "overpayment_reason_other": No
       - "overpayment_reason_other_explain": something
       - "overpayment_reason_unknown": No
@@ -1442,21 +1673,27 @@ attachment:
       - "possess_money_yes__1": ${ possess_overpayment }
       - "possess_money_no__1": ${ not possess_overpayment }
       - "possess_money_amount__1":  ${currency(possess_overpayment_amount, decimals=False) if possess_overpayment else ''}
-      - "received_real_estate_yes": No
-      - "received_real_estate_no": No
-      - "received_real_estate_value": something
-      - "gave_away_real_estate_yes": No
-      - "gave_away_real_estate_no": No
-      - "gave_away_real_estate_amount": something
-      - "sold_yes": No
-      - "sold_no": No
-      - "sold_amount": something
-      - "gave_away_cash_yes": No
-      - "gave_away_cash_no": No
-      - "Amount_3": something
-      - "got_cash_yes": No
-      - "got_cash_no": No
-      - "got_cash_amount": something
+      - "received_real_estate_yes": ${ received_real_estate }
+      - "received_real_estate_no": ${ not received_real_estate }
+      - "received_real_estate_value": |
+            % if received_real_estate:
+            ${ received_real_estate_amount }
+            % endif
+      - "gave_away_real_estate_yes": ${ gave_away_real_estate } 
+      - "gave_away_real_estate_no": ${ not gave_away_real_estate }
+      - "gave_away_real_estate_amount": ${ gave_away_real_estate_amount }
+      - "sold_yes": ${ sold_real_estate }
+      - "sold_no": ${ not sold_real_estate }
+      - "sold_amount": |
+            % if sold_real_estate:
+            ${ sold_real_estate_amount }
+            % endif
+      - "gave_away_cash_yes": ${ gave_cash_after_notice }
+      - "gave_away_cash_no": ${ not gave_cash_after_notice }
+      - "gave_away_cash_amount": ${ currency(gave_away_cash_amount) }
+      - "got_cash_yes": ${ received_cash_after_notice }
+      - "got_cash_no": ${ not received_cash_after_notice }
+      - "got_cash_amount": ${ currency(got_cash_amount) }
       - "dependent_1": ${household.item(0)}
       - "dependent_1_age": ${household.item(0).age}
       - "dependent_1_relationship": ${household.item(0).relationship}
