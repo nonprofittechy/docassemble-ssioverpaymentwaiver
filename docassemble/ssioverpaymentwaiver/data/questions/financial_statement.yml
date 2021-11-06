@@ -204,6 +204,14 @@ fields:
     datatype: yesno
   - Other people who depend on me for support: household.there_are_any
     datatype: yesno
+  - Other people who I cannot claim on my income tax return: non_tax_dependent
+    datatype: yesno
+  - Does anyone who you cannot claim on your income tax return give you any money or pay any household bills or expenses?: non_tax_dependent_contributes_to_expenses
+    datatype: yesnoradio
+    show if: non_tax_dependent
+  - How much do you get in total?: non_tax_dependent_contributes_to_expenses_amount
+    datatype: currency
+    show if: non_tax_dependent_contributes_to_expenses
 ---
 id: how many dependents  
 question: |
@@ -516,9 +524,6 @@ question: |
   Tell me about ${ x }'s ${ ordinal(i) } job.
 subquestion: |  
   Look at ${ x }'s most recent pay stubs to answer this question.
-  The Social Security Administration needs to know both the gross pay and the 
-  amount you take home after taxes and deductions.
-
 fields:
   - Employer's name: x.jobs[i].employer
   - Address of employer: x.jobs[i].employer_address
@@ -535,9 +540,6 @@ fields:
   - Average number of hours worked each pay check: x.jobs[i].hours_per_period
     datatype: integer
     show if: x.jobs[i].is_hourly    
-  - Amount earned before taxes and deductions (gross pay): x.jobs[i].value
-    datatype: currency
-    hide if: x.jobs[i].is_hourly
   - Take home pay (net pay) each typical pay check: x.jobs[i].net
     datatype: currency    
   - How often does ${x.name.first} receive a pay check?: x.jobs[i].period
@@ -551,8 +553,6 @@ question: |
 subquestion: |  
   You should look
   at the household member's most recent pay stubs to answer this question.
-  You need to provide both the 'net' (take home) and 'gross' (amount before
-  taxes and deductions).
 fields:
   - Whose job is this? : household.jobs[i].whose_job
     datatype: object
@@ -564,8 +564,6 @@ fields:
   - Phone number of employer: household.jobs[i].employer_phone
     required: False  
   - Net (take home) earnings each typical pay check: household.jobs[i].net
-    datatype: currency
-  - Gross earnings each typical pay check: household.jobs[i].value
     datatype: currency
   - How often does this person receive a pay check?: household.jobs[i].period
     datatype: integer
@@ -602,6 +600,11 @@ fields:
     show if:
       code: |
         x.incomes[i].type == "other support"
+  - Is the support part of a loan agreement?: x.incomes[i].support_from_loan
+    datatype: yesnoradio
+    show if: 
+      code: |
+        x.incomes[i].type == "other support"    
   - Please explain the other sources: x.incomes[i].remarks
     input type: area
     maxlength: 26

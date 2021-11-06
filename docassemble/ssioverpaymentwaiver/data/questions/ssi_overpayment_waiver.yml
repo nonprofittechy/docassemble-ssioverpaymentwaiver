@@ -105,8 +105,6 @@ code: |
   overpayment_benefits_used_for
 
   if informed_ssa:
-    if not informed_orally:
-      how_when_where
     benefits_changed_after_contact
 
   overpayment_why_not_at_fault  
@@ -161,6 +159,7 @@ code: |
       assets_cannot_be_sold
     if expenses_exceed_income:
       expenses_exceed_income_explanation
+    authorize_disclosure_to_ssa      
     
   nav.set_section('Finishing up')
   client.address.address
@@ -608,7 +607,7 @@ fields:
     datatype: yesnoradio
   - Is ${ recordee } under 18 now?: waiver_for_minor_child
     datatype: yesnoradio
-  - Did you receive any of the overpaid money?:   someone_else_user_received_benefits
+  - Did you get any of the overpaid money?:   someone_else_user_received_benefits
     datatype: yesnoradio
   - Did you use the money for ${ recordee }?: money_used_for_beneficiary
     datatype: yesnoradio
@@ -740,11 +739,11 @@ fields:
       - SSI: SSI
       - EAEDC: EAEDC
       - TAFDC (Temporary Aid to Families with Dependent Children): TAFDC
+      - VA Benefits: VA
       - Other: other
   - Name of benefits program: receives_benefits_other
     show if: receives_benefits_type_options['other']
   - What is the account or claim number for your benefits?: receives_benefits_claim_number
-    show if: receives_benefits_type_options['other']
 
 ---
 code: |
@@ -794,7 +793,11 @@ fields:
 ---
 id: ssa payment type
 question: |
-  What kind of Social Security payments does ${recordee} receive?
+  % if not client_is_overpaid_person:
+  What kind of Social Security payments does ${recordee} get?
+  % else:
+  What kind of Social Security payments do you get?
+  % endif
 fields:
   - no label: payment_type
     datatype: checkboxes
@@ -939,6 +942,8 @@ fields:
     input type: radio
     code: |
       overpayment_reason_choices
+  - What was the reason?: overpayment_reason_other_explain
+    show if: overpayment_reason['something_else']
 ---
 variable name: overpayment_reason_choices
 data:
@@ -1042,7 +1047,48 @@ data:
       % endif     
   - something_else: Something else
   - dont_know: I don't know
-
+---
+id: understanding of rules
+question: |
+  Did you understand that you have to tell the Social Security
+  Administration when your situation changes?
+subquestion: |
+  The Social Security Administration asks you to tell them when:
+  
+  - you start or stop working
+  - you get married
+  - you get divorced
+  - you move
+  - your income changes
+  - your resources change
+  - you start or stop going to school
+  - any other change affects your benefits
+  
+fields:
+  - Did you understand the rules listed above?: client_understands_reporting_rules
+    datatype: yesnoradio
+  - Why not?: client_understands_reporting_rules_no_explain
+    datatype: area
+    maxlength: 160
+    show if: 
+      variable: client_understands_reporting_rules
+      is: False
+---
+id: client was able to report changes
+question: |
+  Did something stop you from being able to report changes to the Social Security Administration?
+fields: 
+  - no label: client_prevented_from_reporting_other
+    datatype: yesno
+    input type: radio
+    choices:
+      - Yes: True
+      - No. I was able to report changes.: False
+  - Explain: why_cant_report_to_ssa
+    show if: client_prevented_from_reporting_other
+    datatype: area
+    rows: 2
+    maxlength: 160
 ---
 # if: |
 #   payment_type['other'] and not payment_type['SSI']
@@ -1123,9 +1169,7 @@ id: ssa contact
 question: |
   Contact with Social Security Administration
 subquestion: |
-  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
-
-  % else:
+  % if not (overpayment_reason == 'dont_know' or overpayment_reason == 'something_else'):
   You said that the reason for the overpayment was that ${overpayment_reason_plain_text}.
   % endif
 fields:
@@ -1142,33 +1186,37 @@ fields:
     maxlength: 285
     show if:
       variable: informed_ssa
-      is: False
-  - label: |
-      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
-      Did you talk to someone (by phone or in person) about the change or event that made you overpaid?
-      % else:
-      Did you talk to someone (by phone or in person) about the fact that ${overpayment_reason_plain_text}?
-      % endif
-    field: informed_orally
-    datatype: yesnoradio
+      is: False          
+  - When? List any dates: told_ssa_dates
+    maxlength: 80
     show if: informed_ssa
-  - Who did you talk to?: who_spokewith
-    maxlength: 44
-    show if: informed_orally
-  - What did you say?: informed_what_said 
-    datatype: area
-    maxlength: 300
-    show if: informed_orally
----
-id: ssa contact how
-question: |
-  How did you talk to the Social Security Administration?
-subquestion: |
-  You said that you told Social Security about the overpayment, but it wasn't by phone or in person.
-fields:
-  - Explain how, when and where you told the Social Security Administration that you were being overpaid.: how_when_where
+  - How?: told_ssa_how
+    show if: informed_ssa
+    datatype: checkboxes
+    choices:
+      - Phone: phone
+      - Fax: fax
+      - Letter: letter
+      - In person, at a local office: office
+      - Electronic wage reporting: wage_reporting
+      - Other: other
+  - Explain how and where: how_when_where
     datatype: area
     maxlength: 344
+    show if: told_ssa_how['other']
+  - Do you have any copies of letters or other proof that you told the Social Security Administration about the change?: told_ssa_documentation
+    datatype: yesnoradio
+  - note: |
+      **Okay**. Please send a copy with this letter when
+      you deliver it to the SSA.
+    show if: told_ssa_documentation
+  - Why not?: told_ssa_documentation_explain_why_cant_send
+    datatype: area
+    rows: 2
+    maxlength: 160
+    show if:
+      variable: told_ssa_documentation
+      is: False
 ---
 id: ssa contact followup
 question: |
@@ -1199,7 +1247,7 @@ question: |
   Past overpayments
 fields:
   - Is this the first time you have been overpaid?: first_overpayment
-    datatype: yesnoradio
+    datatype: yesnomaybe
   - What Social Security Number were you overpaid on before?: past_overpayment_ssn
     validate: is_valid_ssn
     datatype: ssn
@@ -1212,12 +1260,11 @@ fields:
     show if:
       variable: first_overpayment
       is: False
-  - If the reason is similar to the reason you were overpaid this time, explain what you did to prevent it happening again.: past_overpayment_similar_explanation
-    datatype: area
-    maxlength: 125
+  - Is the reason similar to the reason you were overpaid the first time?: overpaid_before_same_reason
+    datatype: yesnoradio
     show if:
       variable: first_overpayment
-      is: False 
+      is: False
 ---
 id: expected financial changes
 comment: |
@@ -1423,9 +1470,11 @@ under: |
   ${ client }
 ---
 code: |
-  client_support = client.incomes.total(type='other') > 0 if not isinstance(client.incomes, DAEmpty) else []
-  spouse_support = spouse.incomes.total(type='other') > 0 if not isinstance(spouse.incomes, DAEmpty) else []
-  household_support = household.incomes.total(type='other') > 0 if not isinstance(household.incomes, DAEmpty) else []
+  client_support = client.incomes.total(type='other support') > 0 if not isinstance(client.incomes, DAEmpty) else []
+  spouse_support = spouse.incomes.total(type='other support') > 0 if not isinstance(spouse.incomes, DAEmpty) else []
+  household_support = household.incomes.total(type='other support') > 0 if not isinstance(household.incomes, DAEmpty) else []
+    
+  support_from_loan = any([income for income in client.incomes + spouse.incomes + household.incomes if hasattr(income, 'support_from_loan') and income.support_from_loan])    
     
   receives_support = client_support or spouse_support or household_support
   all_incomes = client.incomes + spouse.incomes + household.incomes
@@ -1474,6 +1523,61 @@ code: |
 ---
 code: |
   expense_support_details = comma_and_list([item.support_explanation for item in expenses if item.type == "support"])
+---
+id: authorize ssa to review accounts
+question: |
+  Do you give permission to the Social Security Administration
+  to get your bank records?
+subquestion: |
+  Read the statement below. If you agree, click the checkbox
+  to accept and continue.
+
+    "I authorize any custodian of records at any financial institution to disclose to the Social Security
+    Administration any records about my financial business or that of the person named above whom I
+    legally represent or whose benefits I manage."
+
+  <div class="panel panel-primary">
+    <div class="panel-heading">
+      <h3 class="panel-title">I understand:</h3>
+    </div>
+    <div class="panel-body scrollable-panel">
+    <ul>
+    <li>I have the right to revoke this authorization at any time before any records are disclosed;</li>
+    <li>The Social Security Administration may request all records about me from any financial institution;</li>
+    <li>Any information obtained will be kept confidential;</li>
+    <li>I have the right to obtain a copy of the record which the financial institution keeps concerning the</li>
+    <li>instances when it has disclosed records to a government authority unless the records were disclosed</li>
+    <li>because of a court order;</li>
+    <li>This authorization is not required as a condition of doing business with any financial institution.</li>
+    <li>The Social Security Administration will request records to determine the ability to repay an</li>
+    <li>overpayment in conjunction with a waiver determination;</li>
+    <li>Failing to provide or revoking my authorization may result in the Social Security Administration</li>
+    <li>determining, on that basis, that adjustment or recovery of the overpayment will not deprive me of</li>
+    <li>funds to pay my bills for food, clothing, housing, medical care, or other necessary expenses;</li>
+    <li>This authorization is in effect until the earliest of: 1) a final decision on whether adjustment or</li>
+    <li>recovery of my overpayment would deprive me of funds to pay my bills for food, clothing, housing,</li>
+    <li>medical care, or other necessary expenses; or 2) my revocation of this authorization in written</li>
+    <li>notification to the Social Security Administration.    </li>
+    </ul>
+    </div>
+  </div>
+  
+  
+  If you do not agree to let the Social Security Administration
+  to get your bank records, the Social Security Administration
+  may not give you a waiver of the overpayment.
+field: authorize_disclosure_to_ssa
+choices:
+  - I authorize the Social Security Admininistration to get my bank records: True
+  - I do not authorize the Social Security Administration to get my bank records: False
+css: |
+  <style>
+    .scrollable-panel{
+      height:300px;
+      overflow-y:scroll;
+      width:100%;
+      }  
+  </style>
 ---
 id: preview pdf
 continue button field: preview_pdf
@@ -1585,8 +1689,9 @@ attachment:
       - "money_used_for_beneficiary_no": ${ not money_used_for_beneficiary }
       - "benefits_used_for": ${ overpayment_benefits_used_for }
       - "ssa_told_client_must_pay_for_someone_else_yes": something
-      - "client_received_overpaid_money_yes": No
-      - "client_received_overpaid_money_no": No
+      # TODO: the variable names don't line up with usage here
+      - "client_received_overpaid_money_yes": ${ someone_else_user_received_benefits}
+      - "client_received_overpaid_money_no": ${ not someone_else_user_received_benefits }
       - "situation_client_minor_when_received": ${ situation_at_overpayment['situation_client_minor_when_received'] }
       - "situation_client_adult_when_received": ${ situation_at_overpayment['situation_client_adult_when_received'] }
       - "situation_client_getting_disability_benefits_when_overpaid": ${ situation_at_overpayment['situation_client_getting_disability_benefits_when_overpaid'] }
@@ -1634,39 +1739,74 @@ attachment:
       - "overpayment_reason_attorney_fee_not_withheld": ${ overpayment_reason['attorney_fee']}
       - "overpayment_reason_student_status": ${ overpayment_reason['not_student']}
       - "overpayment_reason_dependent_child_status": ${ overpayment_reason['no_child']}
-      - "overpayment_reason_other": No
-      - "overpayment_reason_other_explain": something
-      - "overpayment_reason_unknown": No
-      - "client_understands_reporting_rules_yes": No
-      - "client_understands_reporting_rules_no": No
-      - "client_understands_reporting_rules_no_explain": something
-      - "client_prevented_from_reporting_other_yes": No
-      - "client_prevented_from_reporting_other_no": No
-      - "why_cant_report_to_ssa": something
-      - "client_prevented_from_reporting_other_explain": something
+      - "overpayment_reason_other": ${ overpayment_reason['something_else']}
+      - "overpayment_reason_other_explain": |
+            % if overpayment_reason['something_else']:
+            ${ overpayment_reason_other_explain }
+            % endif
+      - "overpayment_reason_unknown": ${ overpayment_reason['dont_know'] }
+      - "client_understands_reporting_rules_yes": ${ client_understands_reporting_rules }
+      - "client_understands_reporting_rules_no": ${ not client_understands_reporting_rules}
+      - "client_understands_reporting_rules_no_explain": |
+            % if not client_understands_reporting_rules:
+            ${ client_understands_reporting_rules_no_explain }
+            % endif
+      - "client_prevented_from_reporting_other_yes": ${ client_prevented_from_reporting_other}
+      - "client_prevented_from_reporting_other_no": ${ client_prevented_from_reporting_other }
+      - "why_cant_report_to_ssa": |
+            % if client_prevented_from_reporting_other:
+            ${ why_cant_report_to_ssa }
+            % endif
       - "told_ssa_yes__1": ${ informed_ssa }
       - "told_ssa_no__1": ${ not informed_ssa }
-      - "told_ssa_phone": No
-      - "told_ssa_fax_letter": No
-      - "told_ssa_in_person": No
-      - "told_ssa_electronic_wage_reporting": No
-      - "why_didnt_tell_ssa": something
-      - "told_ssa_how_other": No
-      - "told_ssa_how_other_explain": something
+      - "told_ssa_phone": ${ told_ssa_how['phone'] }
+      - "told_ssa_fax_letter": ${ told_ssa_how['fax'] or told_ssa_how['letter'] }
+      - "told_ssa_in_person": ${ told_ssa_how['office'] }
+      - "told_ssa_electronic_wage_reporting": ${ told_ssa_how['wage_reporting']}
+      - "why_didnt_tell_ssa": |
+            % if not informed_ssa:
+            ${ did_not_inform_ssa_explanation }
+            % endif
+      - "told_ssa_how_other": ${ told_ssa_how['other'] }
+      - "told_ssa_how_other_explain": |
+            % if told_ssa_how['other']:
+            ${ how_when_where }
+            % endif
       - "told_ssa_dates": something
-      - "told_ssa_documentation_yes": No
-      - "told_ssa_documentation_no": No
+      - "told_ssa_documentation_yes": |
+            % if informed_ssa:
+            ${ told_ssa_documentation }
+            % endif
+      - "told_ssa_documentation_no": |
+            % if informed_ssa:
+            ${ not told_ssa_documentation}
+            % endif
       - "told_ssa_documentation_explain_why_cant_send": something
-      - "overpaid_before_yes": No
-      - "overpaid_before_no": No
-      - "overpaid_before_same_reason_yes": No
-      - "overpaid_before_same_reason_no": No
-      - "overpaid_before_same_reason_unknown": something
+      - "overpaid_before_yes": ${ not first_overpayment }
+      - "overpaid_before_no": ${ first_overpayment }
+      - "overpaid_before_same_reason_yes": |
+            % if not first_overpayment:
+            ${ overpaid_before_same_reason}
+            % endif
+      - "overpaid_before_same_reason_no": |
+            % if not first_overpayment:
+            ${ not overpaid_before_same_reason }
+            % endif
+      - "overpaid_before_same_reason_unknown": ${ first_overpayment is None }
       - "receiving_ssi": ${yesno(received_ssi)}
-      - "receiving_tanf": No
-      - "tanf_claim_number": something
-      - "receiving_va_benefits": No
-      - "va_benefits_number": something
+      - "receiving_tanf": ${ receives_benefits_type_options['TAFDC'] }
+      - "tanf_claim_number": |
+            % if receives_benefits and receives_benefits_type_options['TAFDC']:
+            ${ receives_benefits_claim_number }
+            % endif
+      - "receiving_va_benefits": |
+            % if receives_benefits:
+            ${ receives_benefits_type_options['VA'] }
+            % endif
+      - "va_benefits_number": |
+            % if receives_benefits and receives_benefits_type_options['VA']:
+            ${ receives_benefits_claim_number }
+            % endif
       - "possessed_money_yes": ${ possessed_overpayment_at_notice }
       - "possessed_money_no": ${ not possessed_overpayment_at_notice }
       - "possessed_money_amount": ${currency(possessed_overpayment_at_notice_amount, decimals=False) if possessed_overpayment_at_notice else ''}
@@ -1709,11 +1849,20 @@ attachment:
       - "dependent_5": ${ household.item(4) }
       - "dependent_5_age": ${ household.item(4).age }
       - "dependent_5_relationship": ${ household.item(4).relationship }
-      - "non_tax_dependent_yes": No
-      - "non_tax_dependent_no": No
-      - "non_tax_dependent_contributes_to_expenses_yes": No
-      - "non_tax_dependent_contributes_to_expenses_no": No
-      - "non_tax_dependent_contributes_to_expenses_amount": something
+      - "non_tax_dependent_yes": ${ non_tax_dependent }
+      - "non_tax_dependent_no": ${ not non_tax_dependent }
+      - "non_tax_dependent_contributes_to_expenses_yes": |
+            % if non_tax_dependent:
+            ${ non_tax_dependent_contributes_to_expenses }
+            % endif
+      - "non_tax_dependent_contributes_to_expenses_no": |
+            % if non_tax_dependent:
+            ${ not non_tax_dependent_contributes_to_expenses }
+            % endif
+      - "non_tax_dependent_contributes_to_expenses_amount": |
+            % if non_tax_dependent and non_tax_dependent_contributes_to_expenses:
+            ${ currency(non_tax_dependent_contributes_to_expenses_amount) }
+            % endif
       - "account_1_type": ${ assets.item(0).type }
       - "account_1_name_address": ${ assets.item(0).institution_name } ${ assets.item(0).institute_address } 
       - "account_1_owner": ${ assets.item(0).owner }
@@ -1744,11 +1893,10 @@ attachment:
       - "account_5_balance": ${ assets.item(4).balance }
       - "account_5_income": ${ assets.item(4).amount(period_to_use=12) }
       - "account_5_number": ${ assets.item(4).account_number }
-      - "accounts_total_balance": something
-      - "accounts_total_income": something
-      - "client_owns_car_yes": No
-      - "client_owns_car_no": No
-      - "business_total_loan": something
+      - "accounts_total_balance": ${ assets.market_value_total() }
+      - "accounts_total_income": ${ assets.total(period_to_use=12) }
+      - "client_owns_car_yes": ${ vehicles.there_are_any }
+      - "client_owns_car_no": ${ not vehicles.there_are_any }
       - "vehicle_owner_1": ${vehicles.item(0).owner}
       - "vehicle_year_make_model_1": ${vehicles.item(0).year_make_model() }
       - "vehicle_pv_1": ${thousands(vehicles.item(0).value)}
@@ -1764,9 +1912,9 @@ attachment:
       - "vehicle_pv_3": ${thousands(vehicles.item(2).value)}
       - "vehicle_loan_balance_3": ${thousands(vehicles.item(2).balance)}
       - "vehicle_purpose_3": ${vehicles.item(2).primary_purpose}
-      - "vehicle_total_value": something
-      - "client_owns_real_estate_yes": No
-      - "client_owns_real_estate_no": No
+      - "vehicle_total_value": ${ vehicles.total() }
+      - "client_owns_real_estate_yes": ${ real_estate.there_are_any }
+      - "client_owns_real_estate_no": ${ not real_estate.there_are_any }
       - "real_property_owner_1": ${real_estate.item(0).owner}
       - "real_property_description_1": ${real_estate.item(0).description}
       - "real_property_value_1": ${thousands(real_estate.item(0).market_value)}
@@ -1782,41 +1930,43 @@ attachment:
       - "real_property_value_3": ${thousands(real_estate.item(2).market_value)}
       - "real_property_loan_balance_3": ${thousands(real_estate.item(2).balance)}
       - "real_property_income_3": ${currency(real_estate.item(2).amount(period_to_use=12), decimals=False)}
-      - "real_property_total_income": something
-      - "real_property_total_loan": something
-      - "real_property_total_value": something
-      - "client_interest_business_yes": No
-      - "client_interest_business_no": No
-      - "business_income_1": something
-      - "business_description_1": something
-      - "business_value_1": something
-      - "business_loan_balance_1": something
-      - "business_owner_1": something
-      - "business_owner_2": something
-      - "business_description_2": something
-      - "business_value_2": something
-      - "business_loan_balance_2": something
-      - "business_income_2": something
-      - "business_description_3": something
-      - "business_value_3": something
-      - "business_loan_balance_3": something
-      - "business_income_3": something
-      - "business_total_income": something
-      - "business_total_value": something
+      - "real_property_total_income": ${ real_estate.total(period_to_use=12) }
+      - "real_property_total_loan": ${ real_estate.balance_total() }
+      - "real_property_total_value": ${ real_estate.market_value_total() }
+      - "client_interest_business_yes": ${ properties.there_are_any}
+      - "client_interest_business_no": ${ not properties.there_are_any}
+      - "business_income_1": ${ properties.item(0).value}
+      - "business_description_1": ${ properties.item(0).description }
+      - "business_value_1": ${ properties.item(0).market_value}
+      - "business_loan_balance_1": ${ properties.item(0).balance}
+      - "business_owner_1": ${ properties.item(0).owner}
+      - "business_owner_2": ${ properties.item(1).owner}
+      - "business_description_2": ${ properties.item(1).description}
+      - "business_value_2": ${ properties.item(1).market_value}
+      - "business_loan_balance_2": ${ properties.item(1).balance }
+      - "business_income_2": ${ properties.item(1).value }
+      - "business_description_3": ${ properties.item(2).description }
+      - "business_value_3": ${ properties.item(2).market_value}
+      - "business_loan_balance_3": ${ properties.item(2).balance}
+      - "business_income_3": ${ properties.item(2).value }
+      - "business_total_income": ${ currency(properties.total(period_to_use=12)) }
+      - "business_total_value": ${ currency(properties.total_market_value() ) }
+      - "business_total_loan": ${ currency(properties.balance_total() ) }
       - "user_employed_yes": ${yesno(client.jobs.there_are_any)}
       - "user_employed_no": ${noyes( client.jobs.there_are_any)}
-      - "user_wages_weekly": No
-      - "user_wages_biweekly": No
-      - "user_wages_monthly": No
-      - "user_wages_bimonthly": No
+      # Always use monthly total because client may have multiple jobs
+      # - "user_wages_weekly": ${ client.jobs.item(0).period == 52 }
+      # - "user_wages_biweekly": ${ client.jobs.item(0).period == 26 }
+      - "user_wages_monthly": ${ True if client.jobs.there_are_any else False }
+      #- "user_wages_bimonthly": ${ client.jobs.item(0).period == 6 }
       - "user_employer_name_address_phone": ${client.jobs.item(0).name_address_phone()}
       - "user_wages_net": ${thousands(client.jobs.net_total(period_to_use=12))}
       - "spouse_employed_yes": ${yesno(spouse.jobs.there_are_any)}
       - "spouse_employed_no": ${noyes( spouse.jobs.there_are_any)}
-      - "spouse_wages_weekly": No
-      - "spouse_wages_biweekly": No
-      - "spouse_wages_monthly": No
-      - "spouse_wages_bimonthly": No
+      #- "spouse_wages_weekly": No
+      #- "spouse_wages_biweekly": No
+      - "spouse_wages_monthly": ${ True if spouse.jobs.there_are_any else False }
+      #- "spouse_wages_bimonthly": No
       - "spouse_employer_name_address_phone": ${spouse.jobs.item(0).name_address_phone()}
       - "spouse_wages_net": ${thousands(spouse.jobs.net_total(period_to_use=12))}
       - "dependent_employed_yes": ${yesno(household.jobs)}
@@ -1825,8 +1975,8 @@ attachment:
       - "dependent_wages_net": ${thousands(household.jobs.net_total())}
       - "receive_support_yes": ${yesno(receives_support)}
       - "receive_support_no": ${noyes( receives_support)}
-      - "receive_support_loan_yes": No
-      - "receive_support_loan_no": No
+      - "receive_support_loan_yes": ${ support_from_loan }
+      - "receive_support_loan_no": ${ not support_from_loan}
       - "receive_support_source": ${comma_and_list(support_sources)}
       - "receive_support_amount": ${thousands(client.incomes.total(type='other support') + spouse.incomes.total(type='other support') + household.incomes.total(type='other support'))}
       - "user_net_pay_total": ${thousands(client.jobs.net_total(period_to_use=12))}
@@ -1863,11 +2013,11 @@ attachment:
       - "dependent_other_support_total": ${currency(household.incomes.total(type='other support',period_to_use=12), decimals=False)}
       - "user_asset_income_total": ${currency(assets.total(owner=client,period_to_use=12), decimals=False)}
       - "spouse_asset_income_total": | 
-          % if has_spouse: 
+          % if has_spouse:
           ${currency(assets.total(owner=spouse,period_to_use=12), decimals=False)}
           % endif
       - "dependent_asset_income_total": | 
-          % if household.there_are_any: 
+          % if household.there_are_any:
           ${currency(assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12), decimals=False)}
           % endif
       - "user_other_total": ${currency(client.incomes.total(type='other',period_to_use=12), decimals=False)}
@@ -1875,56 +2025,54 @@ attachment:
       - "dependent_other_total": ${currency(household.incomes.total(type='other',period_to_use=12), decimals=False)}
       - "user_income_total": ${thousands(client.incomes.total(period_to_use=12) + assets.total(owner=client,period_to_use=12) + client.jobs.total(period_to_use=12))}
       - "spouse_income_total": | 
-          % if has_spouse: 
+          % if has_spouse:
           {thousands(spouse.incomes.total(period_to_use=12) + assets.total(owner=spouse,period_to_use=12) + spouse.jobs.total(period_to_use=12))}
           % endif$
       - "dependent_income_total": | 
-          % if household.there_are_any: 
+          % if household.there_are_any:
           ${thousands(household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12))}
           % endif
       - "grand_total": ${thousands(grand_total)}
-      - "remarks": something
+      #- "remarks": something
       - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12) + expenses.total(type='mortgage',period_to_use=12), decimals=False)}
       - "expense_food": ${currency(expenses.total(type='food',period_to_use=12), decimals=False)}
       - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12), decimals=False)}
       - "expense_fuel": ${currency(expenses.total(type='fuel',period_to_use=12), decimals=False)}
       - "expense_clothing": ${currency(expenses.total(type='clothing',period_to_use=12), decimals=False)}
-      - "expense_household_items": something
+      - "expense_household_items": ${currency(expenses.total(type='household items',period_to_use=12), decimals=False)}
       - "expense_property_tax": ${currency(expenses.total(type='property tax',period_to_use=12), decimals=False)}
       - "expense_insurance": ${currency(expenses.total(type='insurance', period_to_use=12), decimals=False) }
       - "expense_medical": ${currency(expenses.total(type='medical',period_to_use=12), decimals=False)}
-      - "expense_car_loan": something
+      - "expense_car_loan": ${currency(expenses.total(type='car loan',period_to_use=12), decimals=False)}
       - "expense_car": ${currency(expenses.total(type='auto',period_to_use=12), decimals=False)}
       - "expense_transportation": ${currency(expenses.total(type='transportation',period_to_use=12), decimals=False)}
-      - "expense_tuition": something
-      - "expense_court_ordered": ${ currency(expenses.total(type='support', period_to_use=12), decimals=False) }
+      - "expense_tuition": ${currency(expenses.total(type='school',period_to_use=12), decimals=False)}
+      - "expense_court_ordered": ${ currency(expenses.total(type='court order', period_to_use=12), decimals=False) }
       - "expense_cc_minimum": ${ currency(expenses.total(type='credit cards',period_to_use=12), decimals=False) }
       - "expense_other":  ${ currency(expenses.total(type='other',period_to_use=12), decimals=False)}
-      - "expense_total": something
-      - "expense_remarks": something
-
+      - "expense_total": ${ expenses.total(period_to_use=12)}
+      #- "expense_remarks": 
       - "monthly_income": ${thousands(grand_total)} 
       - "monthly_expenses": ${thousands(monthly_expenses)}
       - "adjusted_expenses": ${thousands(adjusted_expenses)}
-
-      - "expense_vs_income_total": something
+      - "expense_vs_income_total": ${ thousands(grand_total - adjusted_expenses) }
       - "expenses_exceed_income_explanation": ${expenses_exceed_income_explanation if expenses_exceed_income else ''}
-      - "financial_situation_will_change_yes": ${ will_receive_inheritance } # TODO
-      - "financial_situation_will_change_no": ${ not will_receive_inheritance } # TODO
+      - "financial_situation_will_change_yes": ${ will_receive_inheritance }
+      - "financial_situation_will_change_no": ${ not will_receive_inheritance }
       - "financial_situation_will_change_explanation": ${ will_receive_inheritance_explanation }
-      - "assets_grand_total": something
+      - "assets_grand_total": ${ assets.total() }
       - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if non_cash_assets and assets_cannot_be_converted else ''}
-      - "remarks_continued": something
-      - "authorize_disclosure_to_ssa_yes": No
-      - "authorize_disclosure_to_ssa_no": No
+      # - "remarks_continued": something
+      - "authorize_disclosure_to_ssa_yes": ${ authorize_disclosure_to_ssa }
+      - "authorize_disclosure_to_ssa_no": ${ not authorize_disclosure_to_ssa }
       - "customer_signature": |
-          ${ user.signature }
-      - "user_mailing_address": something
-      - "signature_date": something
+          ${ client.signature }
+      - "user_mailing_address": ${ client.address.block() }
+      - "signature_date": ${ today() }
       - "legal_representative_signature": |
-          ${ user.signature }
+          ${ client.signature }
       - "legal_representative_mailing_address": something
       - "signature_date_2": ${ today() }
       - "user_signature": |
