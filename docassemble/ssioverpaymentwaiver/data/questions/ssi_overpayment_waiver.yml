@@ -601,8 +601,10 @@ id: overpayment info
 question: |
   Did you have any control over the overpayment?
 fields:
-  - Did you live with ${recordee} when the overpayment happened?: someone_else_lived_with_user
+  - Did the Social Security Administration tell you that you were responsible for the overpayment?: ssa_told_client_must_pay_for_someone_else
     datatype: yesnoradio
+  - Did you live with ${recordee} when the overpayment happened?: someone_else_lived_with_user
+    datatype: yesnoradio    
   - Do you live with ${ recordee } right now?: client_lives_with_overpaid_person
     datatype: yesnoradio
   - Is ${ recordee } under 18 now?: waiver_for_minor_child
@@ -1656,10 +1658,18 @@ attachment:
       - "client_name": ${ recordee } # TODO
       - "rep_received_benefits_yes": ${ not client_is_rep_payee } # TODO: is this still correct?
       - "rep_received_benefits_no": ${ client_is_rep_payee }
+      - "someone_else_lived_with_user_yes__1": |
+          % if not client_is_overpaid_person:
+          ${ someone_else_lived_with_user }
+          % endif
       - "someone_else_lived_with_user_yes": |
           % if not client_is_overpaid_person:
           ${ someone_else_lived_with_user }
           % endif
+      - "someone_else_lived_with_user_no__1": |
+          % if not client_is_overpaid_person:
+          ${ not someone_else_lived_with_user }
+          % endif                
       - "someone_else_lived_with_user_no": |
           % if not client_is_overpaid_person:
           ${ not someone_else_lived_with_user }
@@ -1688,7 +1698,8 @@ attachment:
       - "money_used_for_beneficiary_yes": ${ money_used_for_beneficiary }
       - "money_used_for_beneficiary_no": ${ not money_used_for_beneficiary }
       - "benefits_used_for": ${ overpayment_benefits_used_for }
-      - "ssa_told_client_must_pay_for_someone_else_yes": something
+      - "ssa_told_client_must_pay_for_someone_else_yes": ${ ssa_told_client_must_pay_for_someone_else }
+      - "ssa_told_client_must_pay_for_someone_else_no": ${ ssa_told_client_must_pay_for_someone_else }
       # TODO: the variable names don't line up with usage here
       - "client_received_overpaid_money_yes": ${ someone_else_user_received_benefits}
       - "client_received_overpaid_money_no": ${ not someone_else_user_received_benefits }
