@@ -1,7 +1,7 @@
 ---
 metadata:
-  title: SSI Overpayment Waiver Request
-  short title: Overpayment Waiver
+  title: Social Security Overpayment Waiver or Change in Repayment Rate
+  short title: Overpayment Waiver or Change
   revision_date: 2021-10-05
 ---
 features:
@@ -18,7 +18,10 @@ modules:
 ---
 default screen parts:
   under: |
-    [:comment-dots: Feedback](${ feedback_link(user_info(), github_repo="docassemble-ssioverpaymentwaiver", github_user="nonprofittechy") })
+    % if not user_logged_in():
+    [:sign-in-alt: Sign-in](${url_of('login', next=interview_url())}) or [register](${url_of('register', next=interview_url())}) to save your progress (optional).
+    % endif
+    [:comment-dots: Feedback](${ feedback_link(user_info(), github_repo="docassemble-ssioverpaymentwaiver", github_user="nonprofittechy") })    
   pre: |
     % if get_config('debug'):
     `id: ${ user_info().question_id }`
@@ -58,61 +61,50 @@ code: |
   nav.set_section('Getting started')
   intro_screen
   client.name.first
-  client_has_overpayment_notice
 
   nav.set_section('Who is requesting a waiver?')
-  if not client_is_overpaid_person:
-    client_lives_with_overpaid_person
-  recordee.name.first
-  
-  household_questions # TODO: move these  
-  
+  client_is_overpaid_person
   agree_overpaid
   if not agree_overpaid:
     continue_anyway
+  
+  if not client_is_overpaid_person:
+    client_lives_with_overpaid_person
+  recordee.name.first
     
-  recordee.ssn
-  recordee.claim_number    
     
-  if not household.there_are_any:
-    household.target_number = 0
-    household.gathered = True
-
+  #recordee.ssn
+  #recordee.claim_number    
+  
   if recordee == client:
     client_is_rep_payee = False
     
-  if has_spouse:
-    spouse.name.first
-  if household.there_are_any:
-    review_household_members
   
   nav.set_section('Information about the overpayment')
-  
+  client_has_overpayment_notice  
   if only_change_monthly_due:
-    explain_ssa_634
+    #explain_ssa_634
     ssa_634
     saw_signature_choice
     if not (signature_choice == 'paper'):
       client.signature    
     download_pdf
-  else:
-    explain_ssa_632
+  #else:
+  #  explain_ssa_632
 
   payment_type
   overpayment_reason
   overpayment_explanation
 
-  overpayment_benefits_used_for
+  if client_is_rep_payee:
+    overpayment_benefits_used_for
 
   if informed_ssa:
     benefits_changed_after_contact
 
   overpayment_why_not_at_fault  
   
-  if not possess_overpayment:
-    if possessed_overpayment_at_notice:
-      cant_return_explanation
-  else:
+  if possess_overpayment:
     pay_ssa_explanation
   
   overpayment_pay_less_reasons
@@ -149,6 +141,16 @@ code: |
     expense_other_details = DAEmpty()
   else:
     need_financials_explanation
+    if not household.there_are_any:
+      household.target_number = 0
+      household.gathered = True
+
+    if has_spouse:
+      spouse.name.first
+    if household.there_are_any:
+      review_household_members
+    
+    household_questions  
     cash_amount
     financial_statement_questions
     if assets.there_are_any:
@@ -213,7 +215,7 @@ fields:
     show if:
       variable: filing_for
       is: someone_else      
-  - Please explain: client_relationship_other_explanation
+  - Please explain (include the name of any organization you work for): client_relationship_other_explanation
     datatype: area
     show if: relationship_to_user['other']
 ---
@@ -228,6 +230,19 @@ question: |
 fields:
   - no label: client_has_overpayment_notice
     datatype: yesnoradio
+  - What is the date on the notice?: overpayment_notice_date
+    datatype: date
+    show if: client_has_overpayment_notice
+  - What is the first month you were overpaid? (include year and month): overpayment_notice_first_overpayment
+    show if: client_has_overpayment_notice
+  - What is the last month you were overpaid? (include year and month): overpayment_notice_last_overpayment
+    show if: client_has_overpayment_notice
+  - If you were only overpaid for one month, what is the month? (include year and month): overpayment_notice_exact_month
+    required: False  
+    show if: client_has_overpayment_notice    
+  - What is the amount of the overpayment?: notice_overpayment_amount
+    datatype: currency
+    show if: client_has_overpayment_notice
 ---
 id: will_receive_inheritance
 question: |
@@ -368,7 +383,7 @@ code: |
 ---
 id: intro
 question: |
-  Social Security Overpayment Waiver or Change
+  Social Security Overpayment Waiver or Change in Repayment Rate
 subquestion: |
   This website can help you ask the Social Security administration to 
   
@@ -395,8 +410,6 @@ subquestion: |
   1. Information about how you save and spend money, such as bank statements
   and bills.
   
-  This form will also ask for your Social Security number. We keep your
-  information safe. Click below to learn more.
 fields: 
   - Before you start you must accept the [terms of use](https://vlpnet.org/tos-for-guided-interviews/): intro_screen
     datatype: checkboxes
@@ -453,7 +466,7 @@ content: |
 ---
 id: who is overpaid
 question: |
-  Who got too much money from Social Security?
+  Who does Social Security say had an overpayment?
 subquestion:
   Whose account is the overpayment on?
   Look at the letter about the overpayment that you got from Social Security.
@@ -516,19 +529,14 @@ content: |
 ---
 id: objective
 question: |
-  What are you asking the Social Security Administration to do?
-fields:
-  - no label: client_goals
-    # required: False
-    datatype: checkboxes
-    choices:
-      - "**Reduce** the amount I pay back each month.": change_payment
-      - "**Reduce** or **waive** the total amount I need to pay.": waiver_payment
-    none of the above: |
-      I don't know
+  What are you asking the Social Security Administration to let you do?
+field: client_goals
+choices:
+  - Pay less total money back: waive_overpayment
+  - Pay less money each month, but the same total amount: reduce_overpayment
 ---
 code: |
-  only_change_monthly_due = len(client_goals.true_values()) == 1 and client_goals["change_payment"]
+  only_change_monthly_due = client_goals == 'reduce_overpayment'
 ---
 comment: |
   Not sure we will leave this in--somewhat in the nature
@@ -577,14 +585,21 @@ question: |
 subquestion: |
   This form is used when you want the Social Security Administration to waive or reduce the amount you owe them.
   
-  If you don't agree with the Social Security Administration that an overpayment happened, you may want to appeal the overpayment instead. It's a good idea to talk to a lawyer. For help finding legal aid, visit the [Legal Services Corporation](https://www.lsc.gov/what-legal-aid/find-legal-aid).
+  If you don’t agree with the Social Security Administration that an overpayment happened or you’re not sure, you may want to [appeal the overpayment](https://secure.ssa.gov/iApplNMD/start) instead. But you must act quickly because there are time limits for filing an appeal. You can [start your appeal](https://secure.ssa.gov/iApplNMD/start) on Social Security's website.
   
-  If you received the letter from the Social Security Administration notifying you of the overpayment more than 65 days ago, it is too late for you to file an appeal. If it is too late for you to file an appeal and you don’t agree that an overpayment happened, you should still proceed by selecting "Keep going" to request the Social Security Administration waive or reduce the amount you owe them.
+  If you appeal you can also ask for a waiver now or at any time later. If you want to save your work on the waiver request, you’ll need to create an account.
+  
+  It’s a good idea to talk to a lawyer if you want to appeal. If you live in Massachusetts, visit the [Legal Resource Finder](https://masslrf.org) to find legal help. For help finding legal aid in other states, visit the [Legal Services Corporation](https://www.lsc.gov/what-legal-aid/find-legal-aid).
+  
+  If you received the Notice of Overpayment more than 65 days ago, it may be too late for you to file an appeal unless you had a good reason for missing the deadline. 
+
+  If it is too late for you to file an appeal and you don’t agree that an overpayment happened, click “Keep going” to finish the request for a waiver.
 buttons:
   - Keep going:
       code: |
         continue_anyway = True  
-  - Restart: restart
+  - Exit and file an appeal: exit
+    url: https://secure.ssa.gov/iApplNMD/start
   - Exit: exit
 ---
 id: is rep payee
@@ -613,6 +628,7 @@ fields:
     datatype: yesnoradio
   - Did you use the money for ${ recordee }?: money_used_for_beneficiary
     datatype: yesnoradio
+    show if: someone_else_user_received_benefits
 ---
 id: your situation
 question: |
@@ -805,8 +821,8 @@ fields:
     datatype: checkboxes
     choices:
       - Supplemental Security Income (SSI): SSI
-      - Social Security Disability (SSDI): other
-      - Retirement benefits: other
+      - Social Security Disability (SSDI): SSDI
+      - Social Security Retirement benefits: SSR
     none of the above: |
       ${recordee} no longer receives any money from Social Security
 ---
@@ -877,7 +893,7 @@ fields:
 ---
 id: ability to pay
 question: |
-  Why are you asking for an overpayment?
+  Why are you asking for a waiver?
 subquestion: |
   Check any of the below that apply
 fields:
@@ -1248,14 +1264,9 @@ id: past overpayments
 question: |
   Past overpayments
 fields:
-  - Is this the first time you have been overpaid?: first_overpayment
-    datatype: yesnomaybe
-  - What Social Security Number were you overpaid on before?: past_overpayment_ssn
-    validate: is_valid_ssn
-    datatype: ssn
-    show if:
-      variable: first_overpayment
-      is: False
+  - Has Social Security ever said you have been overpaid before?: first_overpayment
+    datatype: noyesmaybe
+    # Leaving this logic inverted to reduce scope of wording change
   - Why were you overpaid in the past?: past_overpayment_explanation
     datatype: area
     maxlength: 125
@@ -1405,7 +1416,6 @@ fields:
   - note: |
       Choose an office above, or use the [Office locator](https://secure.ssa.gov/ICON/main.jsp)
     show if: found_offices
-  - Office name: ssa_office.name.text
   - Address: ssa_office.address.address
   - Suite: ssa_office.address.unit
     required: False
@@ -1429,6 +1439,7 @@ subquestion: |
   We are almost ready to print your forms. You will need to sign them before
   delivering them. We recommend you sign electronically now, before you print. 
   You can sign using your computer mouse, or sign on your phone with your finger.
+    
 field: signature_choice
 buttons:  
   - Sign on a mobile phone: phone
@@ -1591,6 +1602,10 @@ subquestion: |
   ${ ssa_634_template['preview'] if only_change_monthly_due else ssa_632_template['preview'] }
    
   Remember to come back to this window to continue and sign your form.
+  
+  When you sign this form you are saying the following: 
+  
+  "I declare under penalty of perjury that I have examined all the information on this form, and on any accompanying statements or forms, and it is true and correct to the best of my knowledge. I understand that anyone who knowingly gives a false statement about a material fact in this information, or causes someone else to do so, commits a crime and may be subject to a fine or imprisonment."
 ---
 id: download pdf
 event: download_pdf
@@ -1598,9 +1613,18 @@ question: |
   Your document is ready
 subquestion: |
   1. Download and print 2 copies of the "Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate" document below.
-  1. Keep one copy for your own records.
-  2. Deliver one copy to your local Social Security Administration
-  office.
+  
+  ### Before you send this to the Social Security Administration
+  
+  1. Write the Social Security Number (SSN) of the overpaid person on Page 1, Question 1 on both copies. 
+  3. Download and print 2 copies of the Financial Records Authorization. 
+  4. Send one copy of each document to your local Social Security office at ${ ssa_office.address.on_one_line() }. 
+  5. Keep one copy of each document for yourself in a safe place.
+  
+  When you have finished downloading and printing your documents, click the "exit" or "restart" button to erase your work.
+  
+  **Warning**: clicking "exit" or "restart" will erase your progress. Make
+  sure you have downloaded a copy of your final work first.
 attachment code: |
   ssa_634_template['final'] if only_change_monthly_due else ssa_632_template['final']
 allow emailing: False
@@ -1628,7 +1652,7 @@ attachment:
     fields:
       - "record_owner": ${ recordee }
       - "record_claim_number": ${ recordee.claim_number }
-      - "record_ssn": ${ recordee.ssn }
+      # - "record_ssn": ${ recordee.ssn }
       - "client_is_overpaid_person_yes": ${ client_is_overpaid_person }
       - "client_is_overpaid_no": ${ not client_is_overpaid_person }
       - "client_relationship_parent": |
@@ -1695,9 +1719,18 @@ attachment:
       - "possess_money_yes": ${ possess_overpayment }
       - "possess_money_no": ${ not possess_overpayment }
       - "possess_money_amount": ${ possess_overpayment_amount }
-      - "money_used_for_beneficiary_yes": ${ money_used_for_beneficiary }
-      - "money_used_for_beneficiary_no": ${ not money_used_for_beneficiary }
-      - "benefits_used_for": ${ overpayment_benefits_used_for }
+      - "money_used_for_beneficiary_yes": |
+          % if someone_else_user_received_benefits:
+          ${ money_used_for_beneficiary }
+          % endif
+      - "money_used_for_beneficiary_no": |
+          % if someone_else_user_received_benefits:
+          ${ not money_used_for_beneficiary }
+          % endif
+      - "benefits_used_for": |
+          % if client_is_rep_payee:
+          ${ overpayment_benefits_used_for }
+          % endif
       - "ssa_told_client_must_pay_for_someone_else_yes": ${ ssa_told_client_must_pay_for_someone_else }
       - "ssa_told_client_must_pay_for_someone_else_no": ${ ssa_told_client_must_pay_for_someone_else }
       # TODO: the variable names don't line up with usage here
@@ -1730,10 +1763,26 @@ attachment:
       - "overpayment_waiver_second_request_yes": ${ not overpayment_waiver_second_request }
       - "client_has_overpayment_notice_yes": ${ client_has_overpayment_notice }
       - "client_has_overpayment_notice_no": ${ not client_has_overpayment_notice }
-      - "overpayment_notice_date": something
-      - "overpayment_notice_first_overpayment": something
-      - "overpayment_notice_last_overpayment": something
-      - "overpayment_notice_exact_month": something
+      - "overpayment_notice_date": |
+          % if client_has_overpayment_notice:
+          ${ overpayment_notice_date }
+          % endif
+      - "overpayment_notice_first_overpayment": |
+          % if client_has_overpayment_notice:
+          ${ overpayment_notice_first_overpayment }
+          % endif
+      - "overpayment_notice_last_overpayment": |
+          % if client_has_overpayment_notice:
+          ${ overpayment_notice_last_overpayment }
+          % endif
+      - "overpayment_notice_exact_month": |
+          % if client_has_overpayment_notice: 
+          ${ overpayment_notice_exact_month }
+          % endif
+      - "notice_overpayment_amount": |
+          % if client_has_overpayment_notice:
+          ${ thousands(notice_overpayment_amount) }
+          % endif
       - "overpayment_reason_income_too_high": ${ overpayment_reason['worked_many_hours']}
       - "overpayment_reason_household_income_too_high": ${ overpayment_reason['household_too_much_income']}
       - "overpayment_reason_savings_too_high": ${ overpayment_reason['money_in_bank']}

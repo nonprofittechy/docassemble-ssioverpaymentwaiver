@@ -197,8 +197,7 @@ id: who lives with client
 question: |
   Your household
 subquestion: |
-  Who lives with you? Check all that apply. If you live alone, do not check
-  anything.
+  Who lives with you? Check all that apply.
 fields:
   - My spouse: has_spouse
     datatype: yesno
@@ -206,6 +205,9 @@ fields:
     datatype: yesno
   - Other people who I cannot claim on my income tax return: non_tax_dependent
     datatype: yesno
+  - I live alone: unused_i_live_alone
+    datatype: yesno
+    uncheck others: True
   - Does anyone who you cannot claim on your income tax return give you any money or pay any household bills or expenses?: non_tax_dependent_contributes_to_expenses
     datatype: yesnoradio
     show if: non_tax_dependent
@@ -282,8 +284,10 @@ edit:
 id: household review
 question: Household members that depend on you for support
 subquestion: |
-  So far you've told us about ${len(household)} household ${noun_plural('members',len(household))}.
+  So far you've told us about ${len(household)} dependents in your household.
+  
   You can add more or continue to the next question.
+  
   ${ household.table }
   ${ household.add_action() }
 field: review_household_members
