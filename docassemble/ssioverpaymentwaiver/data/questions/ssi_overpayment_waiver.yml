@@ -109,17 +109,15 @@ code: |
   
   overpayment_pay_less_reasons
   cant_pay_at_all
-  affordable_amount
   overpayment_waiver_second_request
 
   first_overpayment
 
   gave_cash_after_notice
-  expect_change
+  will_receive_inheritance
   
   nav.set_section('Financial information')
   evaluate_if_receives_benefits # We may already know--use code to set if true
-  received_ssi
   if receives_benefits:
     receives_benefits_type
     cash_amount = DAEmpty()
@@ -165,8 +163,7 @@ code: |
     
   nav.set_section('Finishing up')
   client.address.address
-  ssa_office.name.text
-  
+  ssa_office.address.address  
   preview_pdf
   
   run_signature_flow
@@ -178,14 +175,13 @@ code: |
   store_variables_snapshot(data={'zip':client.address.zip,
     'state':client.address.state,
     'client_is_rep_payee':client_is_rep_payee,
-    'client_goals':client_goals.true_values(),
+    'client_goals':client_goals,
     'agree_overpaid': agree_overpaid,
     'payment_type':payment_type.true_values(),
     'overpayment_reason': overpayment_reason,
     'possess_overpayment': possess_overpayment,
     'overpayment_pay_less_reasons': overpayment_pay_less_reasons,
     'informed_ssa':informed_ssa,
-    'expect_change': expect_change.true_values(),
     'cant_pay_at_all': cant_pay_at_all,
     'informed_ssa': informed_ssa,
     'first_overpayment': first_overpayment,
@@ -375,8 +371,8 @@ code: |
     receives_benefits = True
     receives_benefits_type_options = 'SSI'
     receives_benefits_type = 'SSI'
-    receives_ssi = True
-    received_ssi = False
+    #receives_ssi = True
+    #received_ssi = False
   else:
     we_think_recordee_is_client = False
   evaluate_if_receives_benefits = True
@@ -742,7 +738,10 @@ question: |
 subquestion: |
   Answer yes if you personally receive cash welfare benefits, SSI, or a state cash 
   benefit that is based on your need.
-yesno: receives_benefits  
+field:  receives_benefits  
+choices:
+  - Yes: True
+  - No: False
 help: |
   If you are receiving SSI or another benefit based on your need, you do not need
   to give the Social Security Administration as much information about your finances.
@@ -759,6 +758,7 @@ fields:
       - TAFDC (Temporary Aid to Families with Dependent Children): TAFDC
       - VA Benefits: VA
       - Other: other
+    none of the above: False      
   - Name of benefits program: receives_benefits_other
     show if: receives_benefits_type_options['other']
   - What is the account or claim number for your benefits?: receives_benefits_claim_number
@@ -843,8 +843,7 @@ fields:
   - Did you get any cash, (other than money you got from working), after the notice of overpayment?: received_cash_after_notice
     datatype: yesnoradio
   - How much cash did you get?: got_cash_amount
-    datatype: area
-    maxlength: 170
+    datatype: currency
     show if: received_cash_after_notice
   - Did you sell any real estate after the notice of overpayment?: sold_real_estate
     datatype: yesnoradio
@@ -852,18 +851,21 @@ fields:
     help: |
       Enter a dollar amount, or put your best estimate.
     maxlength: 20    
+    show if: sold_real_estate
   - Did you give away any real estate after the notice of overpayment?: gave_away_real_estate
     datatype: yesnoradio
   - How much was it worth?: gave_away_real_estate_amount
     help: |
       Enter a dollar amount, or put your best estimate.
     maxlength: 20
+    show if: gave_away_real_estate
   - Did you get any real estate after the notice of overpayment?: received_real_estate
-    datatype: yesno
+    datatype: yesnoradio
   - How much was it worth?: received_real_estate_amount
     help: |
       Enter a dollar amount, or put your best estimate.
-    maxlength: 20         
+    maxlength: 20
+    show if: received_real_estate
 ---
 id: why cant return overpayment
 question: |
@@ -905,13 +907,14 @@ fields:
       - Requiring me to pay back the overpayment is unfair: unfair
       - I thought I still had a disability that would make me eligible for benefits. I filed an appeal and I fully cooperated with Social Security.: thought_disabled
       - I was age 18 and receiving SSI when the overpayment occurred.: 18_with_ssi
+      - Other: other
+    none of the above: False
   - Why is it unfair to ask you to pay back the overpayment?: overpayment_why_unfair
     datatype: area
-    show if: overpayment_pay_less_reasons['Requiring me to pay back the overpayment is unfair']
+    show if: overpayment_pay_less_reasons['unfair']
     maxlength: 70
-  - Why?: overpayment_other_reason_explain    
-    js show if: |
-      !( val('overpayment_pay_less_reasons["cannot_afford"]) || val('overpayment_pay_less_reasons["not_my_fault"]) || val('overpayment_pay_less_reasons["unfair"]) || val('overpayment_pay_less_reasons["thought_disabled"]) || val('overpayment_pay_less_reasons["18_with_ssi"]) )
+  - Why?: overpayment_other_reason_explain
+    show if: overpayment_pay_less_reasons['other']
 ---
 code: |
   overpayment_not_my_fault = overpayment_pay_less_reasons['not_my_fault']
@@ -919,18 +922,11 @@ code: |
 ---
 id: amount can pay
 question: |
-  How much can you afford to pay back each month?
-  
-fields:
-  - I cannot pay anything at all: cant_pay_at_all
-    datatype: yesno
-  - '': affordable_amount
-    datatype: currency
-    hide if: cant_pay_at_all
----
-code: |
-  if cant_pay_at_all:
-    affordable_amount = 0
+  Are you asking the Social Security Administration to waive the entire amount you owe?
+field: cant_pay_at_all
+choices:
+  - Yes: True
+  - No: False
 ---
 id: overpayment_waiver_second_request
 question: |
@@ -939,14 +935,14 @@ fields:
   - no label: overpayment_waiver_second_request
     datatype: yesnoradio
 ---
-id: ssi payment status
-question: |
-  SSI Payments
-fields:
-  - Were you receiving SSI payments in the past?: received_ssi
-    datatype: yesnoradio
-  - Are you receiving SSI payments right now?: receives_ssi
-    datatype: yesnoradio
+#id: ssi payment status
+#question: |
+#  SSI Payments
+#fields:
+#  - Were you receiving SSI payments in the past?: received_ssi
+#    datatype: yesnoradio
+#  - Are you receiving SSI payments right now?: receives_ssi
+#    datatype: yesnoradio
 ---
 id: overpayment reason
 question: |
@@ -961,7 +957,9 @@ fields:
     code: |
       overpayment_reason_choices
   - What was the reason?: overpayment_reason_other_explain
-    show if: overpayment_reason['something_else']
+    show if: 
+      variable: overpayment_reason
+      is: 'something_else'
 ---
 variable name: overpayment_reason_choices
 data:
@@ -987,7 +985,7 @@ data:
       % if not client_is_overpaid_person:
       ${ recordee } got help for food and shelter
       % else:
-      I got got help food and shelter
+      I got help for food and shelter
       % endif
   - double_payment: |
       % if not client_is_overpaid_person:
@@ -1029,7 +1027,7 @@ data:
       % if not client_is_overpaid_person:
       ${recordee} went out of the country for more than 30 days
       % else:
-      I went out of the coutnry for more than 30 days
+      I went out of the country for more than 30 days
       % endif
   - immigration_status: |
       % if not client_is_overpaid_person:
@@ -1278,31 +1276,6 @@ fields:
     show if:
       variable: first_overpayment
       is: False
----
-id: expected financial changes
-comment: |
-  Financial expectation and funds availability
-question: |
-  Changes to your financial situation
-subquestion: |
-  Please think about your financial situation and any changes, whether
-  for the better or worse, that you expect in the next 6 months.
-fields:
-  - In the next 6 months, I expect I or a household member: expect_change
-    datatype: checkboxes
-    choices:
-      - Will receive a large tax refund
-      - Will have a large bill repaid to me
-      - Will receive a pay raise
-      - Will receive a pay cut
-      - Will pay a major bill (such as house repairs): Will pay a major bill
-      - Other financial change for the better
-      - Other financial change for the worse
-  - Explain: expect_change_explanation
-    datatype: area
-    maxlength: 174
-    js show if: |
-      val("expect_change['Will receive a large tax refund']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will have a large bill repaid to me']") || val("expect_change['Will receive a pay raise']") || val("expect_change['Will receive a pay cut']") || val("expect_change['Will pay a major bill']") || val("expect_change['Other financial change for the better']") || val("expect_change['Other financial change for the worse']")
 ---
 code: |
   if assets.there_are_any:
@@ -1853,7 +1826,7 @@ attachment:
             ${ not overpaid_before_same_reason }
             % endif
       - "overpaid_before_same_reason_unknown": ${ first_overpayment is None }
-      - "receiving_ssi": ${yesno(received_ssi)}
+      - "receiving_ssi": ${receives_benefits_type_options['SSI']}
       - "receiving_tanf": ${ receives_benefits_type_options['TAFDC'] }
       - "tanf_claim_number": |
             % if receives_benefits and receives_benefits_type_options['TAFDC']:

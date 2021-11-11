@@ -986,8 +986,8 @@ columns:
       row_item.employer + ', ' + row_item.employer_address + ' (' + row_item.employer_phone + ')'
   - Net income / Month: |
       currency(row_item.net_amount(period_to_use=12))
-  - Gross income / Month: |
-      currency(row_item.amount(period_to_use=12))
+#  - Gross income / Month: |
+#      currency(row_item.amount(period_to_use=12))
 edit:
   - period
 ---
@@ -999,8 +999,8 @@ columns:
       row_item.employer + ', ' + row_item.employer_address + ' (' + row_item.employer_phone + ')'
   - Net Income / Month: |
       currency(row_item.net_amount(period_to_use=12))
-  - Gross income / Month: |
-      currency(row_item.amount(period_to_use=12))
+#  - Gross income / Month: |
+#      currency(row_item.amount(period_to_use=12))
 ---
 table: household.jobs.table
 rows: household.jobs
@@ -1011,8 +1011,8 @@ columns:
       row_item.employer + ', ' + row_item.employer_address + ' (' + row_item.employer_phone + ')'
   - Net Income / Month: |
       currency(row_item.net_amount(period_to_use=12))
-  - Gross income / Month: |
-      currency(row_item.amount(period_to_use=12))
+#  - Gross income / Month: |
+#      currency(row_item.amount(period_to_use=12))
 
 edit:
   - period
