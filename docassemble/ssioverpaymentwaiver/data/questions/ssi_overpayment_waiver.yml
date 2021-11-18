@@ -154,9 +154,7 @@ code: |
     financial_statement_questions
     if assets.there_are_any:
       accounts_special_purpose
-    if non_cash_assets:
-      assets_cannot_be_converted
-    if vehicles.there_are_any or real_estate.there_are_any:
+    if non_cash_assets or vehicles.there_are_any or real_estate.there_are_any:
       assets_cannot_be_sold
     if expenses_exceed_income:
       expenses_exceed_income_explanation
@@ -387,9 +385,12 @@ subquestion: |
   1. **waive an overypayment**, meaning that you don’t have to pay the money back, or
   1. **lower the repayment rate**, meaning that you have to pay less back to Social Security every month
   
-  **Use this website if you agree that you owe Social Security**. 
+  <div class="alert alert-warning" role="alert">
+  :info-circle:  
+  <b>Use this website if you agree that you owe Social Security</b>. 
   If you do not agree, you should file an 
-  [appeal](https://secure.ssa.gov/iApplNMD/start).
+  <a href="https://secure.ssa.gov/iApplNMD/start">appeal</a>.
+  </div>
   
   ${ collapse_template(appeal_help_template) }
   
@@ -1283,63 +1284,15 @@ code: |
     non_cash_assets = []
   fixed_assets = vehicles.elements + real_estate.elements
 ---
-id: funds being saved
+id: unable to sell assets
 question: |
-  Are any funds being saved for a special purpose?
-subquestion: |
-  You said that you or a household member have the following
-  accounts that have cash on hand.
-  
-  Check any funds that are being saved for a special purpose.
-fields:
-  - no label: accounts_special_purpose
-    datatype: object_checkboxes
-    choices: cash_assets
-    object labeler: |
-      lambda y: y.type + ':' +' '  + currency(y.balance, decimals=False)
-  - Explain what the special purpose is: accounts_special_purpose_explanation
-    datatype: area        
-    required: False
-    maxlength: 174
----
-id: convertable noncash assets
-question: |
-  Are there any assets with a balance or value that CANNOT be converted to cash?
-subquestion: |
-  You said that you or a household member have the following assets
-  that have a "balance or value".
-
-  Check any assets below that CANNOT be converted to cash.
-fields:
-  - no label: assets_cannot_be_converted
-    datatype: object_checkboxes
-    choices: non_cash_assets
-    object labeler: |
-      lambda y: y.type + ':' + ' ' + currency(y.balance, decimals=False)
-  - Explain why the assets CANNOT be converted to cash: assets_cannot_be_converted_explanation
-    datatype: area
-    required: False
-    maxlength: 174
----
-id: convertable cash assets
-question: |
-  Are there any assets that do not have a balance or value that CANNOT be sold or
-  otherwise converted to cash?
-subquestion: |
-  You said that you or a household member have the following
-  vehicles and real estate, other than the family car or house.
-
-  Check any assets below that CANNOT be sold or otherwise converted
-  to cash.
+  Is there any reason you cannot sell the assets you told us about?
 fields:
   - no label: assets_cannot_be_sold
-    datatype: object_checkboxes
-    choices: fixed_assets
-    object labeler: |
-      lambda y: (y.year_make_model()) if hasattr(y,'make') else y.description
-  - Explain why the vehicle or property CANNOT be sold: assets_cannot_be_sold_explanation
+    datatype: yesnoradio
+  - Why?: assets_cannot_be_sold_explanation
     datatype: area
-    required: False
+    show if: assets_cannot_be_sold
     maxlength: 174
 ---
 id: contact information
@@ -1511,14 +1464,6 @@ code: |
   adjusted_expenses = monthly_expenses + 25 # See Question 20C
 ---
 code: |
-  if len(cash_assets) > 0:
-    cash_kept_special_purpose = len(accounts_special_purpose) > 0
-    cash_special_purpose_no_money_on_hand = False
-  else:
-    cash_kept_special_purpose = False
-    cash_special_purpose_no_money_on_hand = True
----
-code: |
   room_and_board_explanation = comma_and_list([item.room_and_board_explanation for item in all_incomes if item.type == "room and board"])     
 ---
 code: |
@@ -1622,19 +1567,14 @@ subquestion: |
   1. Write the Social Security Number (SSN) of the overpaid person on Page 1, Question 1 on both copies. 
   3. Download and print 2 copies of the Financial Records Authorization. 
   4. Send one copy of each document to your local Social Security office at ${ ssa_office.address.on_one_line() }. 
-  5. Keep one copy of each document for yourself in a safe place.
-  
-  When you have finished downloading and printing your documents, click the "exit" or "restart" button to erase your work.
-  
-  **Warning**: clicking "exit" or "restart" will erase your progress. Make
-  sure you have downloaded a copy of your final work first.
+  5. Keep one copy of each document for yourself in a safe place.  
 attachment code: |
   ssa_634_template['final'] if only_change_monthly_due else [ssa_632_template['final'], ssa_632_addendum] if len(overflow_fields) else ssa_632_template['final']
 allow emailing: False
 buttons:
-  - Exit: exit
-    url: https://www.ssa.gov/ssi/text-overpay-ussi.htm
-  - Restart: restart
+  - Logout: logout
+    url: https://www.ssa.gov/ssi/text-overpay-ussi.htm  
+  - Start over: new_session
 ---
 objects:
   - ssa_632_template: DADict
@@ -1643,21 +1583,21 @@ objects:
 code: |
   overflow_fields.clear()
   
-  if len(overpayment_why_unfair) > 57:
+  if len(showifdef('overpayment_why_unfair')) > 57:
     new_field = overflow_fields.appendObject()
     new_field.label = "5(c). Why was the overpayment unfair?"
     new_field.type = 'plain'
     new_field.value = overpayment_why_unfair
     new_field.overflow_trigger = 0    
     
-  if len(overpayment_other_reason_explain) > 40:
+  if len(showifdef('overpayment_other_reason_explain')) > 40:
     new_field = overflow_fields.appendObject()
     new_field.label = "5(f). Why else do you want to waive the overpayment?"
     new_field.type = 'plain'
     new_field.value = overpayment_other_reason_explain
     new_field.overflow_trigger = 0
   
-  if need_financials_explanation:
+  if not receives_benefits:
     if len(household) > 5:    
       new_field = overflow_fields.appendObject()
       new_field.type = 'object_list'
@@ -1733,8 +1673,6 @@ code: |
 ---
 need: 
   - grand_total
-  - cash_kept_special_purpose
-  - has_sellable_assets  
 attachments:
   - name: Addendum (SSA-632)
     filename: SSA-632 Addendum
@@ -2220,9 +2158,9 @@ attachments:
       - "financial_situation_will_change_no": ${ not will_receive_inheritance }
       - "financial_situation_will_change_explanation": ${ will_receive_inheritance_explanation }
       - "assets_grand_total": ${ assets.total() }
-      - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted) if non_cash_assets else ''}
-      - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted) if non_cash_assets else ''}
-      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if non_cash_assets and assets_cannot_be_converted else ''}
+      - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_sold) if non_cash_assets else ''}
+      - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_sold) if non_cash_assets else ''}
+      - "cant_convert_countable_asset_explanation": ${assets_cannot_be_sold_explanation if non_cash_assets and assets_cannot_be_sold else ''}
       - "remarks_continued": ${ other_remarks }
       - "authorize_disclosure_to_ssa_yes": ${ authorize_disclosure_to_ssa }
       - "authorize_disclosure_to_ssa_no": ${ not authorize_disclosure_to_ssa }
