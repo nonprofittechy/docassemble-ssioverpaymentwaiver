@@ -80,6 +80,7 @@ code: |
     spouse.review_incomes
 
   collected_household_incomes
+  income_remarks
 
   assets.asset_types
   assets.add_assets

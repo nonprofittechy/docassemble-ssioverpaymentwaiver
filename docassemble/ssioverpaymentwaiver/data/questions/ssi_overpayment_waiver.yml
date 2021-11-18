@@ -15,6 +15,7 @@ features:
 ---
 modules:
   - docassemble.GithubFeedbackForm.github_issue
+  - .addendum
 ---
 default screen parts:
   under: |
@@ -379,21 +380,16 @@ code: |
 ---
 id: intro
 question: |
-  Social Security Overpayment Waiver or Change in Repayment Rate
+  Overpayment Waiver or Change in Repayment Rate
 subquestion: |
-  This website can help you ask the Social Security administration to 
+  If Social Security says you owe them money, this website can help you ask Social Security to: 
   
-  1. **lower the amount that must be paid back**, or;
-  1. **change the schedule of payments** for someone who is told that they
-  owe the Social Security Administration money.
+  1. **waive an overypayment**, meaning that you don’t have to pay the money back, or
+  1. **lower the repayment rate**, meaning that you have to pay less back to Social Security every month
   
-  ${ collapse_template(overpayment_waiver_help_template) }
-
-  #### Before you get started
-
-  Use this website if you agree that you owe the Social Security
-  Administration. If you do not agree, you should file an 
-  [appeal](https://secure.ssa.gov/iApplNMD/start) instead.
+  **Use this website if you agree that you owe Social Security**. 
+  If you do not agree, you should file an 
+  [appeal](https://secure.ssa.gov/iApplNMD/start).
   
   ${ collapse_template(appeal_help_template) }
   
@@ -407,7 +403,7 @@ subquestion: |
   and bills.
   
 fields: 
-  - Before you start you must accept the [terms of use](https://vlpnet.org/tos-for-guided-interviews/): intro_screen
+  - To continue you must accept the [terms of use](https://vlpnet.org/tos-for-guided-interviews/): intro_screen
     datatype: checkboxes
     minlength: 1
     validation messages:
@@ -528,8 +524,8 @@ question: |
   What are you asking the Social Security Administration to let you do?
 field: client_goals
 choices:
-  - Pay less total money back: waive_overpayment
-  - Pay less money each month, but the same total amount: reduce_overpayment
+  - "**Waive an overypayment**, meaning that you don't have to pay the money back": waive_overpayment
+  - "**Lower the repayment rate**, meaning that you have to pay less back every month": reduce_overpayment
 ---
 code: |
   only_change_monthly_due = client_goals == 'reduce_overpayment'
@@ -912,7 +908,7 @@ fields:
   - Why is it unfair to ask you to pay back the overpayment?: overpayment_why_unfair
     datatype: area
     show if: overpayment_pay_less_reasons['unfair']
-    maxlength: 70
+    #maxlength: 70
   - Why?: overpayment_other_reason_explain
     show if: overpayment_pay_less_reasons['other']
 ---
@@ -1365,6 +1361,27 @@ fields:
   - Zip code: x.address.zip
     required: False
 ---
+id: income remarks
+question: |
+  Do you want to tell Social Security anything else about your income and assets?
+fields:
+  - no label: income_remarks
+    datatype: area
+    rows: 3
+    maxlength: 560
+    required: False
+---
+id: expense remarks
+question: |
+  Do you want to tell Social Security anything else about your expenses?
+fields:
+  - no label: expense_remarks
+    datatype: area
+    rows: 3
+    maxlength: 880
+    required: False
+
+---
 id: which office
 question: |
   What Social Security office do you want to send the letter to?
@@ -1565,6 +1582,19 @@ css: |
       }  
   </style>
 ---
+id: final remarks
+question: |
+  Is there anything else you want to tell Social Security?
+subquestion: |
+  You can use this space to write anything else about the overpayment that you 
+  did not already say or that did not fit.
+fields:
+  - no label: other_remarks
+    rows: 5
+    maxlength: 2400
+    required: False
+    datatype: area
+---
 id: preview pdf
 continue button field: preview_pdf
 question: |
@@ -1599,7 +1629,7 @@ subquestion: |
   **Warning**: clicking "exit" or "restart" will erase your progress. Make
   sure you have downloaded a copy of your final work first.
 attachment code: |
-  ssa_634_template['final'] if only_change_monthly_due else ssa_632_template['final']
+  ssa_634_template['final'] if only_change_monthly_due else [ssa_632_template['final'], ssa_632_addendum] if len(overflow_fields) else ssa_632_template['final']
 allow emailing: False
 buttons:
   - Exit: exit
@@ -1608,12 +1638,108 @@ buttons:
 ---
 objects:
   - ssa_632_template: DADict
+  - overflow_fields: DAList.using(auto_gather=False, object_type=DAObject)
+---
+code: |
+  overflow_fields.clear()
+  
+  if len(overpayment_why_unfair) > 57:
+    new_field = overflow_fields.appendObject()
+    new_field.label = "5(c). Why was the overpayment unfair?"
+    new_field.type = 'plain'
+    new_field.value = overpayment_why_unfair
+    new_field.overflow_trigger = 0    
+    
+  if len(overpayment_other_reason_explain) > 40:
+    new_field = overflow_fields.appendObject()
+    new_field.label = "5(f). Why else do you want to waive the overpayment?"
+    new_field.type = 'plain'
+    new_field.value = overpayment_other_reason_explain
+    new_field.overflow_trigger = 0
+  
+  if need_financials_explanation:
+    if len(household) > 5:    
+      new_field = overflow_fields.appendObject()
+      new_field.type = 'object_list'
+      new_field.label = "17. Additional household members"
+      new_field.values = household[5:]
+      new_field.columns = [{'name':'Name'}, {'age':'Age'}, {'relationship':'Relationship to overpaid person'}]
+
+    if len(assets) > 5:
+      new_field = overflow_fields.appendObject()
+      new_field.type = 'object_list'
+      new_field.label = "18. Additional Assets"
+      new_field.values = assets[5:]
+      for asset in assets:
+        asset.name_and_address = f"{asset.institution_name} {asset.institute_address}"
+        asset.income = asset.amount(period_to_use=12)
+      new_field.columns = [
+        {'type': 'Type of account'},
+        {'name_and_address': 'Name and address of institution'},
+        {'owner': 'Name on account'},
+        {'balance': 'Balance'},
+        {'income': 'Income'},
+        {'account_number': 'Account number'}
+      ]
+
+    if len(vehicles) > 3:
+      new_field = overflow_fields.appendObject()
+      new_field.type = 'object_list'
+      new_field.label = "19(a). Additional vehicles"
+      new_field.values = vehicles[3:]
+      for vehicle in vehicles:
+        vehicle.ymk = vehicle.year_make_model()
+      new_field.columns = [
+        'owner': 'Owner',
+        'ymk': 'Year, Make and Model',
+        'value': 'Value',
+        'balance': 'Loan balance',
+        'purpose': 'Main purpose for use'
+      ]
+      
+    if len(real_estate) > 3:
+      new_field = overflow_fields.appendObject()
+      new_field.type = 'object_list'
+      new_field.label = "19(b). Real estate"
+      new_field.values = real_estate[3:]
+      for house in real_estate:
+        house.income = house.amount(period_to_use=12)
+      new_field.columns = [
+        'owner': 'Owner',
+        'description': 'Description',
+        'market_value': 'Market Value',
+        'balance': 'Loan balance',
+        'income': 'Income'
+      ]
+
+    if len(properties) > 3:
+      new_field = overflow_fields.appendObject()
+      new_field.type = 'object_list'
+      new_field.label = "19(c). Other property, valuables, and businesses"
+      new_field.values = properties[3:]
+      for property in properties:
+        property.income = property.amount(period_to_use=12)
+      new_field.columns = [
+        'owner': 'Owner',
+        'description': 'Description',
+        'market_value': 'Market Value',
+        'balance': 'Loan balance',
+        'income': 'Income'
+      ]
+
+  overflow_fields.gathered = True
+    
+      
 ---
 need: 
   - grand_total
   - cash_kept_special_purpose
-  - has_sellable_assets
-attachment:
+  - has_sellable_assets  
+attachments:
+  - name: Addendum (SSA-632)
+    filename: SSA-632 Addendum
+    docx template file: ssa-632-addendum.docx
+    variable name: ssa_632_addendum
   - name: SSA-632 Request For Waiver Of Overpayment Recovery Or Change In Repayment Rate
     filename: SSA-632
     skip undefined: True
@@ -2066,7 +2192,7 @@ attachment:
           ${thousands(household.incomes.total(period_to_use=12) + assets.total(period_to_use=12) - assets.total(owner=client,period_to_use=12) - assets.total(owner=spouse,period_to_use=12) + household.jobs.total(period_to_use=12))}
           % endif
       - "grand_total": ${thousands(grand_total)}
-      #- "remarks": something
+      - "remarks": ${ income_remarks }
       - "expense_rent": ${currency(expenses.total(type='rent',period_to_use=12) + expenses.total(type='mortgage',period_to_use=12), decimals=False)}
       - "expense_food": ${currency(expenses.total(type='food',period_to_use=12), decimals=False)}
       - "expense_utilities": ${currency(expenses.total(type='utilities',period_to_use=12), decimals=False)}
@@ -2084,7 +2210,7 @@ attachment:
       - "expense_cc_minimum": ${ currency(expenses.total(type='credit cards',period_to_use=12), decimals=False) }
       - "expense_other":  ${ currency(expenses.total(type='other',period_to_use=12), decimals=False)}
       - "expense_total": ${ expenses.total(period_to_use=12)}
-      #- "expense_remarks": 
+      - "expense_remarks": ${ expense_remarks } 
       - "monthly_income": ${thousands(grand_total)} 
       - "monthly_expenses": ${thousands(monthly_expenses)}
       - "adjusted_expenses": ${thousands(adjusted_expenses)}
@@ -2097,7 +2223,7 @@ attachment:
       - "cant_convert_countable_asset_yes": ${yesno(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_no": ${noyes(assets_cannot_be_converted) if non_cash_assets else ''}
       - "cant_convert_countable_asset_explanation": ${assets_cannot_be_converted_explanation if non_cash_assets and assets_cannot_be_converted else ''}
-      # - "remarks_continued": something
+      - "remarks_continued": ${ other_remarks }
       - "authorize_disclosure_to_ssa_yes": ${ authorize_disclosure_to_ssa }
       - "authorize_disclosure_to_ssa_no": ${ not authorize_disclosure_to_ssa }
       - "customer_signature": |
