@@ -1690,11 +1690,11 @@ code: |
       for vehicle in vehicles:
         vehicle.ymk = vehicle.year_make_model()
       new_field.columns = [
-        'owner': 'Owner',
-        'ymk': 'Year, Make and Model',
-        'value': 'Value',
-        'balance': 'Loan balance',
-        'purpose': 'Main purpose for use'
+        {'owner': 'Owner'},
+        {"ymk": "Year, Make and Model"},
+        {'value': 'Value'},
+        {'balance': 'Loan balance'},
+        {'purpose': 'Main purpose for use'}
       ]
       
     if len(real_estate) > 3:
@@ -1705,11 +1705,11 @@ code: |
       for house in real_estate:
         house.income = house.amount(period_to_use=12)
       new_field.columns = [
-        'owner': 'Owner',
-        'description': 'Description',
-        'market_value': 'Market Value',
-        'balance': 'Loan balance',
-        'income': 'Income'
+        {'owner': 'Owner'},
+        {'description': 'Description'},
+        {'market_value': 'Market Value'},
+        {'balance': 'Loan balance'},
+        {'income': 'Income'}
       ]
 
     if len(properties) > 3:
@@ -1720,11 +1720,11 @@ code: |
       for property in properties:
         property.income = property.amount(period_to_use=12)
       new_field.columns = [
-        'owner': 'Owner',
-        'description': 'Description',
-        'market_value': 'Market Value',
-        'balance': 'Loan balance',
-        'income': 'Income'
+        {'owner': 'Owner'},
+        {'description': 'Description'},
+        {'market_value': 'Market Value'},
+        {'balance': 'Loan balance'},
+        {'income': 'Income'}
       ]
 
   overflow_fields.gathered = True
