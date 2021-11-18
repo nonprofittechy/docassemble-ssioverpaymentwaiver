@@ -80,14 +80,13 @@ code: |
     spouse.review_incomes
 
   collected_household_incomes
-  income_remarks
 
   assets.asset_types
   assets.add_assets
   assets.gathered = True
   if assets.there_are_any:
     review_assets
-    
+        
   if real_estate.there_are_any:
     review_real_estate
 
@@ -96,7 +95,9 @@ code: |
     
   if vehicles.there_are_any:
     review_vehicles
-
+    
+  income_remarks
+  
   expenses_types
   add_expenses
   expenses.gathered=True
