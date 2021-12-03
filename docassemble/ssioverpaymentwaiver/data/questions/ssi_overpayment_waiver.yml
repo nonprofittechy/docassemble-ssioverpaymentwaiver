@@ -95,7 +95,7 @@ code: |
 
   payment_type
   overpayment_reason
-  overpayment_explanation
+  #overpayment_explanation
 
   if client_is_rep_payee:
     overpayment_benefits_used_for
@@ -103,7 +103,8 @@ code: |
   if informed_ssa:
     benefits_changed_after_contact
 
-  overpayment_why_not_at_fault  
+  # Not used on new form
+  # overpayment_why_not_at_fault  
   
   if possess_overpayment:
     pay_ssa_explanation
@@ -910,7 +911,7 @@ fields:
     datatype: area
     show if: overpayment_pay_less_reasons['unfair']
     #maxlength: 70
-  - Why?: overpayment_other_reason_explain
+  - Other reason: overpayment_other_reason_explain
     show if: overpayment_pay_less_reasons['other']
 ---
 code: |
@@ -1141,42 +1142,42 @@ fields:
 #   - something_else: Something else
 #   - dont_know: I don't know
 ---
-id: overpayment explanation
-question: |
-  Why did the overpayment happen?
-fields:
-  - Explain how the overpayment happened.: overpayment_explanation
-    datatype: area
-    maxlength: 435
+#id: overpayment explanation
+#question: |
+#  Why did the overpayment happen?
+#fields:
+#  - Explain how the overpayment happened.: overpayment_explanation
+#    datatype: area
+#    maxlength: 435
 ---
 depends on:
   - overpayment_reason
 code: |
   overpayment_reason_plain_text = next(filter(lambda reason: next(iter(reason),'') == overpayment_reason, overpayment_reason_choices),{}).get(overpayment_reason)
 ---
-id: overpayment fault
-question: |
-  Why was the overpayment not your fault?
-subquestion: |
-  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
-  Explain why the overpayment wasn't your fault.
-  Answer "I don't know" if that is the best answer.
-  You can type a total of 460 characters in the spaces provided.
-  % else:
-  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_plain_text}.
-  Explain why the overpayment wasn't your fault. 
-  Answer "I don't know" if that is the best answer.
-  You can type a total of 460 characters in the spaces provided.
-  % endif
-fields:
-  - Why was the overpayment not your fault?: overpayment_why_not_at_fault
-    datatype: area
-  - Why is it not your fault that you accepted the overpayment?: overpayment_why_accepted
-    datatype: area
-  - Why did you think you had a right to the money?: overpayment_why_had_right
-    datatype: area
-validation code: |
-  if len(overpayment_why_not_at_fault) + len(overpayment_why_accepted) + len(overpayment_why_had_right) > 460: validation_error("It's too long.")
+#id: overpayment fault
+#question: |
+#  Why was the overpayment not your fault?
+#subquestion: |
+#  % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
+#  Explain why the overpayment wasn't your fault.
+#  Answer "I don't know" if that is the best answer.
+#  You can type a total of 460 characters in the spaces provided.
+#  % else:
+#  You said that the Social Security Administration believes the overpayment happened because ${overpayment_reason_plain_text}.
+#  Explain why the overpayment wasn't your fault. 
+#  Answer "I don't know" if that is the best answer.
+#  You can type a total of 460 characters in the spaces provided.
+#  % endif
+#fields:
+#  - Why was the overpayment not your fault?: overpayment_why_not_at_fault
+#    datatype: area
+#  - Why is it not your fault that you accepted the overpayment?: overpayment_why_accepted
+#    datatype: area
+#  - Why did you think you had a right to the money?: overpayment_why_had_right
+#    datatype: area
+#validation code: |
+#  if len(overpayment_why_not_at_fault) + len(overpayment_why_accepted) + len(overpayment_why_had_right) > 460: validation_error("It's too long.")
 ---
 id: ssa contact
 question: |
