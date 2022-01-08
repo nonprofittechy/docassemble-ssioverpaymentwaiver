@@ -153,8 +153,9 @@ code: |
     household_questions  
     cash_amount
     financial_statement_questions
-    if assets.there_are_any:
-      accounts_special_purpose
+    assets.there_are_any
+    #if assets.there_are_any:
+    #  accounts_special_purpose
     if non_cash_assets or vehicles.there_are_any or real_estate.there_are_any:
       assets_cannot_be_sold
     if expenses_exceed_income:

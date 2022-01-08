@@ -4,6 +4,7 @@ An interview to help an individual appeal an overpayment set by the Social
 Security Administration.
 
 # Changelog
+* 2022-01-08 Bug fix
 * 2021-11-17 Finish the addendum stuff and other refinements
 * 2021-11-07 Get through more of VLP punchlist
 * 2021-11-06 Add 2019 version of SSA-632BK
