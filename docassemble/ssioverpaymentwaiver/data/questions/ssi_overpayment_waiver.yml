@@ -2,7 +2,7 @@
 metadata:
   title: Social Security Overpayment Waiver or Change in Repayment Rate
   short title: Overpayment Waiver or Change
-  revision_date: 2021-10-05
+  revision_date: 2022-01-15
 ---
 features:
   question help button: True
@@ -66,6 +66,10 @@ code: |
 
   nav.set_section('Who is requesting a waiver?')
   client_is_overpaid_person
+  if not filing_for == 'self' and relationship_to_user['rep_payee']:
+    warn_personal_liability
+  elif not filing_for == 'self':
+    warn_answer_as_if_recipient
   agree_overpaid
   if not agree_overpaid:
     continue_anyway
@@ -189,6 +193,28 @@ code: |
   download_pdf
   #financial_statement_download_screen
 ---
+template: who_needs_to_fill_this_out
+subject: |
+  Special information for rep payees
+content: |
+  **If you are a representative payee**,
+  you may be personally responsible for some of the money that
+  Social Security paid.
+  
+  Both:
+  
+  * you
+  * the person who gets the benefits
+  
+  should fill out a copy of this form. If you have a conflict
+  of interest with the person who gets the benefits,
+  the person who gets the benefits should fill this out on 
+  their own. You can still fill out a copy for your personal
+  request to Social Security.
+  
+  For example: it may be a conflict of interest if a mistake that you
+  made as the rep payee caused the overpayment.
+---
 id: client_is_overpaid_person
 question: |
   ${ client.familiar() }, are you filing for yourself or someone else?
@@ -217,6 +243,35 @@ depends on:
   - filing_for
 code: |
   client_is_overpaid_person = filing_for == "self"
+---
+id: warn_personal_liability
+continue button field: warn_personal_liability
+question: |
+  You may have a personal responsibility to pay back the money  
+subquestion: |
+  If you are a representative payee, Social Security can decide
+  that you have to pay back some of the money personally.
+  
+  It is important that both:
+  
+  * you
+  * the person who gets the benefits
+  
+  each fill out their own copy of this form.
+  
+  If you have a conflict of interest with the person who got the benefits:
+  someone else should help them fill out their copy.
+  
+  An example of a conflict of interest would be if a mistake that you
+  personally made caused Social Security to pay too much.
+---
+id: warn_answer_as_if_recipient
+continue button field: warn_answer_as_if_recipient
+question: |
+  Answer these questions as if you are the person who got the benefits
+subquestion: |
+  Some of the questions in this website ask about "you". When you see a question
+  about "you", answer as though you are the person who got the benfits.
 ---
 id: client_has_overpayment_notice
 question: |
@@ -392,6 +447,8 @@ subquestion: |
   </div>
   
   ${ collapse_template(appeal_help_template) }
+  
+  ${ collapse_template(who_needs_to_fill_this_out) }
   
   Before you start, you should find:
   
@@ -1568,9 +1625,9 @@ subquestion: |
   
   ### Before you send this to the Social Security Administration
   
+  3. Download and print 2 copies of the Financial Records Authorization.   
   1. Write the Social Security Number (SSN) of the overpaid person on Page 1, Question 1 on both copies. 
-  3. Download and print 2 copies of the Financial Records Authorization. 
-  4. Send one copy of each document to your local Social Security office at ${ ssa_office.address.on_one_line() }. 
+  4. Send one copy of each document to your local Social Security office at ${ ssa_office.address.on_one_line(show_country=False) }. 
   5. Keep one copy of each document for yourself in a safe place.  
 attachment code: |
   ssa_634_template['final'] if only_change_monthly_due else [ssa_632_template['final'], ssa_632_addendum] if len(overflow_fields) else ssa_632_template['final']
