@@ -59,6 +59,7 @@ id: interview order
 mandatory: True
 scan for variables: False
 code: |
+  multi_user = True
   nav.set_section('Getting started')
   intro_screen
   client.name.first
@@ -168,10 +169,6 @@ code: |
   preview_pdf
   
   run_signature_flow
-  #saw_signature_choice
-  #if not (signature_choice == 'paper'):
-  #  if 
-  #  client.signature
   
   store_variables_snapshot(data={'zip':client.address.zip,
     'state':client.address.state,
@@ -1345,9 +1342,14 @@ subquestion: |
   We have found the following offices that are close to your address.
   
   ${map_of([office for office in officelist])}
+
+  If there is more than one result, you should choose the office that serves your city
+  or town.
+  Use the [Office locator](https://secure.ssa.gov/ICON/main.jsp) to find the
+  SSA office that serves your city.
   % else:
   You can use the [Office locator](https://secure.ssa.gov/ICON/main.jsp) to find
-  a Social Security Office near you.
+  the Social Security Office that serves your city or town.
   % endif
 fields:
   - Social Security Office: ssa_office
@@ -1357,7 +1359,7 @@ fields:
     none of the above: True
     disable others: True
     object labeler: |
-      lambda y: (y.address.on_one_line())
+      lambda y: (y.address.on_one_line(show_country=False))
   - note: |
       Choose an office above, or use the [Office locator](https://secure.ssa.gov/ICON/main.jsp)
     show if: found_offices
