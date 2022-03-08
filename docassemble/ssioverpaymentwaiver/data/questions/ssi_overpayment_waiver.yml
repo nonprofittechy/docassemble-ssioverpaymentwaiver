@@ -271,7 +271,7 @@ question: |
   Answer these questions as if you are the person who got the benefits
 subquestion: |
   Some of the questions in this website ask about "you". When you see a question
-  about "you", answer as though you are the person who got the benfits.
+  about "you", answer as though you are the person who got the benefits.
 ---
 id: client_has_overpayment_notice
 question: |
@@ -1239,15 +1239,11 @@ question: |
   Contact with Social Security Administration
 subquestion: |
   % if not (overpayment_reason == 'dont_know' or overpayment_reason == 'something_else'):
-  You said that the reason for the overpayment was that ${overpayment_reason_plain_text}.
+  You said: "${overpayment_reason_plain_text}."
   % endif
 fields:
   - label: |
-      % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
       Did you tell the Social Security Administration about the change or event that made you overpaid?
-      % else:
-      Did you tell the Social Security Administration that ${overpayment_reason_plain_text}?
-      % endif
     field: informed_ssa
     datatype: yesnoradio
   - Why not?: did_not_inform_ssa_explanation
@@ -1294,14 +1290,15 @@ subquestion: |
   % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
   You said that you contacted the Social Security Administration to let them know that you were overpaid.
   % else:
-  You said that you contacted the Social Security Administration to let them know that ${overpayment_reason_plain_text}.
+  You said that you contacted the Social Security Administration about the reason that you
+  were overpaid.
   % endif
 fields:
   - label: |
       % if overpayment_reason == 'dont_know' or overpayment_reason == 'something_else':
       After you reported the overpayment, did the Social Security Administration change your benefits amount?
       % else:
-      After you reported that ${overpayment_reason_plain_text}, did the Social Security Administration change your benefits amount?
+      After you told Social Security "${overpayment_reason_plain_text}," did the Social Security Administration change your benefits amount?
       % endif
     field: benefits_changed_after_contact
     datatype: yesnoradio
@@ -1389,7 +1386,6 @@ fields:
     rows: 3
     maxlength: 880
     required: False
-
 ---
 id: which office
 question: |

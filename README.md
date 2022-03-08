@@ -4,6 +4,7 @@ An interview to help an individual appeal an overpayment set by the Social
 Security Administration.
 
 # Changelog
+* 2022-03-07 Minor fix of typo and voice
 * 2022-01-15 Add warning for rep payee about filing own copy
 * 2022-01-08 Bug fix
 * 2021-11-17 Finish the addendum stuff and other refinements
