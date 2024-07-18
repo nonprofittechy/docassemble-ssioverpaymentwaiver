@@ -1518,7 +1518,7 @@ code: |
 
   monthly_expenses = expenses.total()
 
-  adjusted_expenses = monthly_expenses + 25 # See Question 20C
+  adjusted_expenses = monthly_expenses + 55 # See Question 20C
 ---
 code: |
   room_and_board_explanation = comma_and_list([item.room_and_board_explanation for item in all_incomes if item.type == "room and board"])     
