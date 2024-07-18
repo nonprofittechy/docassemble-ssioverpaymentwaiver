@@ -44,7 +44,7 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.ssioverpaymentwaiver',
-      version='0.5.3',
+      version='0.5.4',
       description=('Request for Waiver of SSI Overpayment'),
       long_description='# SSI Overpayment waiver\r\n\r\nAn interview to help an individual appeal an overpayment set by the Social\r\nSecurity Administration.\r\n\r\n# Changelog\r\n* 2022-03-07 Minor fix of typo and voice\r\n* 2022-01-15 Add warning for rep payee about filing own copy\r\n* 2022-01-08 Bug fix\r\n* 2021-11-17 Finish the addendum stuff and other refinements\r\n* 2021-11-07 Get through more of VLP punchlist\r\n* 2021-11-06 Add 2019 version of SSA-632BK\r\n* 2021-10-03 Fix office locator\r\n* 2021-10-03 Merge previous fixes\r\n* 2020-12-12 Bug fixes\r\n* 2020-12-08 Bug fixes\r\n* 2020-12-05 duplicate id bug\r\n* 2020-11-27 Bugfixes\r\n* 2020-11-14 Add feedback form + show question ID on debug site\r\n* 2020-10-12 Fix template export value\r\n* 2020-09-28 Modified financial statement, prepared SSA-634\r\n* 2019-10-09 Bug fixes, language cleanup\r\n* 2019-09-29 Bug fixes (question order, hide irrelevant questions)\r\n* 2019-09-21 Bug fixes, finish implementing PDF fields\r\n* 2019-02-06 Preliminary mapping of all PDF fields\r\n* 2019-01-25 Bring to current\r\n* 2018-12-01 Improved financial statement (in progress) and logical questions for overpayment\r\n* Initial version - handles basic financial statement',
       long_description_content_type='text/markdown',
