@@ -1,5 +1,5 @@
 from docassemble.base.functions import defined, value
-from docassemble.base.util import validation_error, Address, DAEmpty, DAObject, DAList, Person, title_case
+from docassemble.base.util import validation_error, Address, DAEmpty, DAObject, DAList, Person, title_case, log
 import re
 import requests
 
@@ -49,19 +49,23 @@ class FieldOfficeList(DAList):
         except:
             return None
 
-        for item in results['features']:
-            fo = self.appendObject()
-            fo.name.text = title_case(item['properties']['AddressLine1']) 
-            fo.title = title_case(item['properties']['OfficeName'])
-            fo.address.address = title_case(item['properties']['AddressLine3'])
-            if item['properties']['AddressLine2']:
-                fo.address.unit = title_case(item['properties']['AddressLine2'])
-            fo.address.city = title_case(item['properties']['City'])
-            fo.address.state = item['properties']['State']
-            fo.address.zip = item['properties']['ZIP5']
-            fo.office_code = item['properties']['OfficeCode']
-            fo.phone_number = item['properties']['BusinessPhone']
 
+        for item in results['features']:
+            try:
+              fo = self.appendObject()
+              fo.name.text = title_case(item['properties']['ADDRESS_LINE_1'])
+              fo.title = title_case(item['properties']['OFFICE_NAME'])
+              fo.address.address = title_case(item['properties']['ADDRESS_LINE_3'])
+              if item['properties']['ADDRESS_LINE_2']:
+                  fo.address.unit = title_case(item['properties']['ADDRESS_LINE_2'])
+              fo.address.city = title_case(item['properties']['CITY'])
+              fo.address.state = item['properties']['STATE']
+              fo.address.zip = item['properties']['ZIP_CODE']
+              fo.office_code = item['properties']['OFFICE_CODE']
+              fo.phone_number = item['properties']['PHONE']
+            except:
+              pass
+            
         self.gathered = True
 
 
@@ -72,7 +76,7 @@ class FieldOfficeSearcher(DAObject):
     #@staticmethod
     def nearest_offices_by_lat_lng(self, latitude, longitude, distance=5):
         """Search for nearby SSA offices, and return raw GeoJSON results"""
-        url =   "https://services6.arcgis.com/zFiipv75rloRP5N4/ArcGIS/rest/services/Office_Points/FeatureServer/1/query"
+        url =   "https://services6.arcgis.com/zFiipv75rloRP5N4/ArcGIS/rest/services/SSA_Field_Office_Information/FeatureServer/0/query"
         
         params = {
             'geometry': str(longitude) + ',' + str(latitude),
@@ -120,8 +124,18 @@ class FieldOfficeSearcher(DAObject):
         # return {}
 
         # TODO: make this safe if API is offline
-        jdata = r.json()
-
+        
+        try:
+            jdata = r.json()
+            # Check if the JSON response contains expected keys
+            if 'features' in jdata:
+                return jdata
+            else:
+                log("Unexpected JSON structure:", jdata)
+                return None
+        except ValueError as e:
+            log(f"JSON decoding failed: {e}")
+            return None
         return jdata
 
     def nearest_offices(self, address, distance=5):
