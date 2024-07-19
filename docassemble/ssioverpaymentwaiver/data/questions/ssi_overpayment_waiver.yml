@@ -3,6 +3,46 @@ metadata:
   title: Social Security Overpayment Waiver or Change in Repayment Rate
   short title: Overpayment Waiver or Change
   revision_date: 2022-01-15
+  description: |
+    If you were paid too much money by the Social Security Administration and are required to pay it back, you can use this form to request a change in the repayment amount or a waiver of part of the overpayment.
+  can_i_use_this_form: |
+    You can use this form if:
+    
+    * You agree that you were overpaid
+    * You want to ask the Social Security Administration to waive the overpayment or reduce the amount you have to pay back
+    * You have received a notice from the Social Security Administration that you were overpaid
+    * You have information about your income, expenses, and assets
+  before_you_start: |
+    Before you start, you should find:
+    
+    1. The notice from Social Security that says that you owe money.
+    1. Information about the money that you get each month, and the money that
+    people who live with you get.
+    1. Find out if you get SSI, SSDI, or both.
+    1. Information about how you save and spend money, such as bank statements
+    and bills.
+  maturity: production
+  estimated_completion_minutes: 30
+  estimated_completion_delta: 10
+  languages:
+    - en
+  help_page_url: "https://www.masslegalhelp.org/public-benefits-ssi/social-security-ssi/ssi-ssdi-and-overpayments"
+  help_page_title: "SSI, SSDI, and overpayments"
+  LIST_topics:
+    - BE-01-03-00-00
+  tags:
+    - BE-01-03-00-00
+  jurisdiction: NAM-US
+  original_form: "https://www.ssa.gov/forms/ssa-632.html"
+  form_numbers:
+    - SSA-632
+    - SSA-634
+  form_titles:
+    - Request for Waiver of Overpayment Recovery or Change in Repayment Rate
+    - Waiver of Overpayment Recovery
+  fees: []
+  update_notes: |
+    Changed exemption from $20 to $55 per new POMs in 2023
 ---
 features:
   question help button: True
