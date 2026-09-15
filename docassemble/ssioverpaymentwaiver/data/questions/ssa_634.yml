@@ -31,13 +31,15 @@ question: |
 subquestion: |
   Answer yes if you personally receive cash welfare benefits, SSI, or a state cash 
   benefit that is based on your need.
-yesno: receiving_benefits  
+fields:
+  - no label: receiving_benefits
+    datatype: yesnoradio
 ---
 id: benefits kind
 question: |
   What kind of cash benefits are you receiving?
 fields: 
-  - no label: benefit_types_received
+  - "What kind of cash benefits are you receiving?": benefit_types_received
     datatype: checkboxes
     choices:
       - Supplemental Security Income (SSI): SSI
@@ -84,7 +86,7 @@ id: inheritance
 question: |
   Do you expect to receive an inheritance within the next 6 months?
 fields:
-  - no label: expect_inheritance
+  - "Do you expect to receive an inheritance within the next 6 months?": expect_inheritance
     datatype: yesnoradio
   - Please explain: expect_inheritance_explanation
     input type: area
@@ -96,7 +98,7 @@ id: convert assets
 question: |
   Is there any reason you cannot convert or sell the “Balance or Value” of any assets you have into cash?
 fields:
-  - no label: cannot_convert
+  - "Is there any reason you cannot convert or sell the “Balance or Value” of any assets you have into cash?": cannot_convert
     datatype: yesnoradio
   - Please explain: cannot_convert_explanation
     input type: area

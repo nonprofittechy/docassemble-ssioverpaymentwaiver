@@ -250,7 +250,7 @@ question: |
   ${ client.familiar() }, are you filing for yourself or someone else?
 progress: 5
 fields:
-  - no label: filing_for
+  - "${ client.familiar() }, are you filing for yourself or someone else?": filing_for
     datatype: radio
     choices:
       - Myself: self
@@ -352,7 +352,7 @@ id: will_receive_inheritance
 question: |
   Do you expect to receive an inheritance in the next 6 months?
 fields:
-  - no label: will_receive_inheritance
+  - "Do you expect to receive an inheritance in the next 6 months?": will_receive_inheritance
     datatype: yesnoradio
   - Please explain: will_receive_inheritance_explanation
     datatype: area
@@ -710,7 +710,9 @@ subquestion: |
   At the time the Social Security Admininistration says you 
   were overpaid, were you a  
   representative payee for ${recordee}?
-yesno: client_is_rep_payee
+fields:
+  - no label: client_is_rep_payee
+    datatype: yesnoradio
 ---
 id: your situation
 question: |
@@ -780,7 +782,7 @@ id: receives_ssi_benefits
 question: |
   Are you receiving SSI benefits?
 fields: 
-  - no label: receives_ssi_benefits  
+  - "Are you receiving SSI benefits?": receives_ssi_benefits
     datatype: radio
     choices:
      - Yes: receiving_ssi
@@ -901,7 +903,7 @@ id: amount can pay
 question: |
   Are you asking the Social Security Administration to waive the entire amount you     owe, including any money you may have already paid back to them?
 fields: 
-  - no label: cant_pay_at_all
+  - "Are you asking the Social Security Administration to waive the entire amount you owe, including any money you may have already paid back to them?": cant_pay_at_all
     datatype: radio
     choices:
      - Yes: True
@@ -1257,7 +1259,7 @@ id: unable to sell assets
 question: |
   Is there any reason you cannot sell the assets you told us about?
 fields:
-  - no label: assets_cannot_be_sold
+  - "Is there any reason you cannot sell the assets you told us about?": assets_cannot_be_sold
     datatype: yesnoradio
   - Why?: assets_cannot_be_sold_explanation
     datatype: area
@@ -1268,7 +1270,7 @@ id: able to sell assets
 question: |
   Can you sell or liquidate any of the assets you listed?
 fields:
-  - no label: assets_can_be_sold
+  - "Can you sell or liquidate any of the assets you listed?": assets_can_be_sold
     datatype: yesnoradio
   - Explain more: can_sell_explanation
     datatype: area

@@ -179,7 +179,7 @@ question: |
 subquestion: |
   For example, extra money that a relative or charity pays you.
 fields:
-  - no label: client.receive_support
+  - "Do you receive any **other** regular financial support?": client.receive_support
     datatype: yesnoradio
   - Is this support under a loan agreement?: client.support_under_loan
     datatype: yesnoradio
@@ -191,7 +191,7 @@ id: support loan amount
 question: |
   How much money do you receive in support each month?
 fields:
-  - no label: client.receive_support_amount
+  - "How much money do you receive in support each month?": client.receive_support_amount
     datatype: currency
   - Source: client.receive_support_source
 ---
@@ -307,7 +307,9 @@ id: any other jobs
 generic object: Individual
 question: |
   So far you've told us about ${x.jobs.number()} jobs. Does ${x} have another job?
-yesno: x.jobs.there_is_another
+fields:
+  - no label: x.jobs.there_is_another
+    datatype: yesnoradio
 ---
 id: household jobs review
 question: |
@@ -354,7 +356,7 @@ subquestion: |
   ${ real_estate.add_action() }
 field: review_real_estate
 ---
-id: real estate review
+id: "real estate review 2"
 question: |
   Businesses, property, or valuables owned by you or your household members
 subquestion: |
@@ -462,7 +464,7 @@ fields:
       expense_types().keys()      
 ---
 if: not only_change_monthly_due
-id: expenses types
+id: "expenses types 2"
 question: |
   What kind of expenses do you have?
 fields:
@@ -626,7 +628,7 @@ fields:
     code: |
       period_list()
 ---
-id: income information
+id: "income information 2"
 generic object: Individual
 if: |
   not hasattr(x.incomes[i],'type')
@@ -855,7 +857,7 @@ fields:
     code: |
       period_list()
 ---
-id: expense information prefilled
+id: "expense information prefilled 2"
 if: |
   hasattr(expenses[i],'type')
 comment: |
@@ -899,7 +901,7 @@ fields:
       code: |
         expenses[i].type == "other"      
 ---
-id: expense information
+id: "expense information 2"
 if: |
   not hasattr(expenses[i],'type')
 comment: |
